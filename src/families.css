@@ -1,0 +1,767 @@
+/* =========================================================================
+   Per-visualFamily treatments for the ROOM SCREEN only.
+
+   Everything here is scoped under .room-screen[data-family] / .family-*, so
+   the intake screen, global app shell, and completion screen keep their
+   existing dark / cyan / violet branding. No puzzle-solving logic depends on
+   any of this — it is purely a visual skin selected by room.visualFamily.
+
+   Structure:
+   1. Shared scaffolding (atmosphere layers, content stacking)
+   2. Shared component rules that consume per-family CSS variables
+   3. One block per family: tokens + bespoke motif + signature motion
+   4. Reduced-motion guard
+   ========================================================================= */
+
+/* ---- 1. Shared scaffolding ------------------------------------------- */
+
+/* The room screen goes full-bleed and carries the base color itself, so the
+   background always covers the whole document height (no gaps under tall
+   content). The 720px reading column moves onto the children. Pinned texture
+   and glow layers live in ::before / ::after. */
+.room-screen[data-family] {
+  position: relative;
+  z-index: 0;
+  max-width: none;
+  align-items: center;
+  background: var(--fam-bg);
+  font-family: var(--fam-body-font);
+}
+
+.room-screen[data-family] .story-block,
+.room-screen[data-family] .puzzle-list {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 720px;
+}
+
+/* ---- 2. Shared component rules (token-driven) ------------------------ */
+
+.room-screen[data-family] .story-block {
+  background: var(--fam-surface);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  box-shadow: var(--fam-card-shadow, none);
+}
+
+.room-screen[data-family] .story-block p {
+  font-family: var(--fam-body-font);
+  color: var(--fam-ink);
+  font-style: var(--fam-prose-style, normal);
+}
+
+.room-screen[data-family] .puzzle-card {
+  background: var(--fam-surface);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  box-shadow: var(--fam-card-shadow, none);
+}
+
+.room-screen[data-family] .puzzle-card.is-locked {
+  opacity: 0.4;
+}
+
+.room-screen[data-family] .puzzle-header h3 {
+  font-family: var(--fam-display-font);
+  color: var(--fam-ink);
+  font-weight: var(--fam-display-weight, 600);
+  letter-spacing: var(--fam-display-tracking, normal);
+  text-transform: var(--fam-display-transform, none);
+}
+
+.room-screen[data-family] .puzzle-prompt {
+  color: var(--fam-ink);
+  font-style: var(--fam-prose-style, normal);
+}
+
+.room-screen[data-family] .puzzle-locked-note {
+  color: var(--fam-ink-dim);
+  font-family: var(--fam-body-font);
+}
+
+.room-screen[data-family] .answer-input {
+  background: var(--fam-input-bg);
+  border: 1px solid var(--fam-border);
+  border-radius: var(--fam-input-radius, var(--fam-radius));
+  color: var(--fam-ink);
+  font-family: var(--fam-input-font, var(--fam-body-font));
+}
+
+.room-screen[data-family] .answer-input::placeholder {
+  color: var(--fam-ink-dim);
+}
+
+.room-screen[data-family] .answer-input:focus {
+  border-color: var(--fam-primary);
+  box-shadow: 0 0 0 2px var(--fam-focus-ring, transparent);
+}
+
+.room-screen[data-family] .btn-primary {
+  background: var(--fam-primary);
+  color: var(--fam-primary-ink);
+  border-radius: var(--fam-btn-radius, var(--fam-radius));
+}
+
+.room-screen[data-family] .btn-primary:hover:not(:disabled) {
+  background: var(--fam-primary-hover);
+}
+
+.room-screen[data-family] .btn-ghost {
+  border-color: var(--fam-border);
+  color: var(--fam-ink-dim);
+  border-radius: var(--fam-btn-radius, var(--fam-radius));
+}
+
+.room-screen[data-family] .btn-ghost:hover:not(:disabled) {
+  border-color: var(--fam-primary);
+  color: var(--fam-primary);
+}
+
+.room-screen[data-family] .hint-text {
+  color: var(--fam-accent);
+  background: var(--fam-hint-bg);
+  border-radius: var(--fam-input-radius, var(--fam-radius));
+  font-family: var(--fam-body-font);
+}
+
+.room-screen[data-family] .answer-feedback {
+  color: var(--fam-feedback, #e85c5c);
+  font-family: var(--fam-body-font);
+}
+
+/* Replace the mixed-emoji puzzle icons with a themed glyph per state.
+   Emoji is neutralised (font-size:0) and a family glyph drawn via ::before. */
+.room-screen[data-family] .puzzle-icon {
+  font-size: 0;
+}
+.room-screen[data-family] .puzzle-icon::before {
+  font-size: 18px;
+  line-height: 1;
+  font-family: var(--fam-body-font);
+}
+.room-screen[data-family] .puzzle-card.is-active .puzzle-icon::before {
+  content: var(--fam-glyph-active, "•");
+  color: var(--fam-primary);
+}
+.room-screen[data-family] .puzzle-card.is-locked .puzzle-icon::before {
+  content: var(--fam-glyph-locked, "•");
+  color: var(--fam-ink-dim);
+}
+.room-screen[data-family] .puzzle-card.is-solved .puzzle-icon::before {
+  content: var(--fam-glyph-solved, "✓");
+  color: var(--fam-accent);
+}
+
+/* =========================================================================
+   3a. SCI-FI  —  cold instrumentation + amber warning light
+   ========================================================================= */
+
+.family-sci-fi {
+  --fam-bg: radial-gradient(circle at 32% 18%, #0a1a29 0%, #05080f 68%);
+  --fam-surface: #0b1521;
+  --fam-border: #1c3a4d;
+  --fam-ink: #dfeaf2;
+  --fam-ink-dim: #6f95a8;
+  --fam-primary: #58c8f0;
+  --fam-primary-hover: #3aa9d4;
+  --fam-primary-ink: #04121c;
+  --fam-accent: #ff9d3c;
+  --fam-display-font: "Chakra Petch", system-ui, sans-serif;
+  --fam-body-font: "Chakra Petch", system-ui, sans-serif;
+  --fam-display-weight: 600;
+  --fam-display-tracking: 0.12em;
+  --fam-display-transform: uppercase;
+  --fam-radius: 2px;
+  --fam-input-radius: 2px;
+  --fam-btn-radius: 2px;
+  --fam-card-border: 1px solid #1c3a4d;
+  --fam-input-bg: #06101a;
+  --fam-input-font: "Share Tech Mono", monospace;
+  --fam-hint-bg: rgba(255, 157, 60, 0.08);
+  --fam-focus-ring: rgba(88, 200, 240, 0.25);
+  --fam-glyph-active: "▸";
+  --fam-glyph-locked: "▪";
+  --fam-glyph-solved: "✓";
+}
+
+/* Scanline overlay across the whole screen. */
+.family-sci-fi::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    rgba(88, 200, 240, 0.045) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* Monospace mission-brief eyebrow above the story. */
+.family-sci-fi .story-block::before {
+  content: "// MISSION BRIEF";
+  display: block;
+  margin-bottom: 10px;
+  font-family: "Share Tech Mono", monospace;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--fam-accent);
+}
+
+.family-sci-fi .puzzle-card {
+  clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 0 100%);
+}
+
+/* HUD corner bracket on active cards. */
+.family-sci-fi .puzzle-card.is-active {
+  position: relative;
+  overflow: hidden;
+}
+.family-sci-fi .puzzle-card.is-active::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 16px;
+  height: 16px;
+  border-top: 2px solid var(--fam-primary);
+  border-left: 2px solid var(--fam-primary);
+  opacity: 0.7;
+}
+
+/* Signature: a scan sweep runs down a card as it comes online. */
+.family-sci-fi .puzzle-card.is-active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 40%;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(88, 200, 240, 0.16),
+    transparent
+  );
+  animation: scifi-scan 1.4s ease-out 1;
+}
+@keyframes scifi-scan {
+  from {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+  }
+  to {
+    transform: translateY(280%);
+    opacity: 0;
+  }
+}
+
+.family-sci-fi .btn-primary {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* =========================================================================
+   3b. FANTASY  —  illuminated manuscript, gold leaf, emerald
+   ========================================================================= */
+
+.family-fantasy {
+  --fam-bg: radial-gradient(circle at 50% 0%, #2a2013 0%, #140d07 70%);
+  --fam-surface: #201811;
+  --fam-border: #6b4e1e;
+  --fam-ink: #ece0c8;
+  --fam-ink-dim: #9a8763;
+  --fam-primary: #d9a94a;
+  --fam-primary-hover: #c2913a;
+  --fam-primary-ink: #241703;
+  --fam-accent: #3aa17e;
+  --fam-display-font: "Cinzel", serif;
+  --fam-body-font: "EB Garamond", serif;
+  --fam-display-weight: 700;
+  --fam-display-tracking: 0.05em;
+  --fam-radius: 3px;
+  --fam-card-border: 1px solid #6b4e1e;
+  --fam-card-shadow: inset 0 0 0 3px rgba(217, 169, 74, 0.14);
+  --fam-input-bg: #191209;
+  --fam-hint-bg: rgba(58, 161, 126, 0.1);
+  --fam-focus-ring: rgba(217, 169, 74, 0.25);
+  --fam-prose-style: normal;
+  --fam-glyph-active: "✦";
+  --fam-glyph-locked: "✧";
+  --fam-glyph-solved: "❖";
+}
+
+.family-fantasy .story-block {
+  position: relative;
+}
+/* Illuminated drop cap on the opening line. */
+.family-fantasy .story-block p::first-letter {
+  font-family: "Cinzel", serif;
+  font-weight: 900;
+  font-size: 3.1em;
+  line-height: 0.8;
+  float: left;
+  margin: 4px 10px 0 0;
+  color: var(--fam-primary);
+  text-shadow: 0 0 12px rgba(217, 169, 74, 0.35);
+}
+
+.family-fantasy .story-block p {
+  font-size: 17px;
+}
+
+.family-fantasy .puzzle-header h3 {
+  font-size: 16px;
+}
+
+/* Soft arcane glow behind an active card. */
+.family-fantasy .puzzle-card.is-active {
+  position: relative;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 3px rgba(217, 169, 74, 0.22),
+    0 0 24px rgba(217, 169, 74, 0.08);
+}
+
+/* Signature: a band of gold light shimmers diagonally across the card. */
+.family-fantasy .puzzle-card.is-active::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 30%,
+    rgba(217, 169, 74, 0.22) 48%,
+    rgba(255, 240, 200, 0.28) 50%,
+    rgba(217, 169, 74, 0.22) 52%,
+    transparent 70%
+  );
+  background-size: 250% 100%;
+  animation: fantasy-shimmer 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes fantasy-shimmer {
+  0%,
+  100% {
+    background-position: 160% 0;
+  }
+  50% {
+    background-position: -60% 0;
+  }
+}
+
+.family-fantasy .btn-primary {
+  letter-spacing: 0.04em;
+}
+
+/* =========================================================================
+   3c. HORROR-GOTHIC  —  candle-lit soot, dried blood, bone
+   ========================================================================= */
+
+.family-horror-gothic {
+  --fam-bg: radial-gradient(circle at 50% 28%, #1a1210 0%, #070405 74%);
+  --fam-surface: #140d0f;
+  --fam-border: #3a1f22;
+  --fam-ink: #cfc4b8;
+  --fam-ink-dim: #7d6f66;
+  --fam-primary: #b02525;
+  --fam-primary-hover: #8a1c1c;
+  --fam-primary-ink: #f3e6df;
+  --fam-accent: #8b9a52;
+  --fam-display-font: "Pirata One", "IM Fell English", serif;
+  --fam-body-font: "IM Fell English", Georgia, serif;
+  --fam-display-weight: 400;
+  --fam-display-tracking: 0.02em;
+  --fam-radius: 2px;
+  --fam-card-border: 1px solid #3a1f22;
+  --fam-input-bg: #0e0809;
+  --fam-hint-bg: rgba(139, 154, 82, 0.09);
+  --fam-focus-ring: rgba(176, 37, 37, 0.25);
+  --fam-prose-style: italic;
+  --fam-glyph-active: "☩";
+  --fam-glyph-locked: "†";
+  --fam-glyph-solved: "✠";
+}
+
+/* Signature: a warm candle glow layer breathes/flickers over the walls. */
+.family-horror-gothic::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 34%,
+    rgba(176, 90, 40, 0.16),
+    transparent 46%
+  );
+  animation: horror-candle 6s ease-in-out infinite;
+}
+@keyframes horror-candle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.62;
+  }
+  20% {
+    opacity: 1;
+  }
+  33% {
+    opacity: 0.74;
+  }
+  47% {
+    opacity: 0.98;
+  }
+  62% {
+    opacity: 0.55;
+  }
+  75% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 0.8;
+  }
+}
+
+/* Heavy vignette closing in around the edges. */
+.family-horror-gothic::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at 50% 42%,
+    transparent 38%,
+    rgba(0, 0, 0, 0.72) 100%
+  );
+}
+
+.family-horror-gothic .puzzle-header h3 {
+  font-size: 22px;
+  color: #d8cdbf;
+}
+
+.family-horror-gothic .story-block p {
+  font-size: 17px;
+}
+
+/* Active card holds a faint, breathing candle-red glow. */
+.family-horror-gothic .puzzle-card.is-active {
+  box-shadow: 0 0 22px rgba(176, 37, 37, 0.14),
+    inset 0 0 30px rgba(0, 0, 0, 0.4);
+  animation: horror-breathe 5s ease-in-out infinite;
+}
+@keyframes horror-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 18px rgba(176, 37, 37, 0.1),
+      inset 0 0 30px rgba(0, 0, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(176, 37, 37, 0.2),
+      inset 0 0 30px rgba(0, 0, 0, 0.45);
+  }
+}
+
+/* =========================================================================
+   3d. NOIR-MYSTERY  —  1940s newsprint, charcoal, one crimson
+   ========================================================================= */
+
+.family-noir-mystery {
+  --fam-bg: linear-gradient(160deg, #16150f 0%, #100f0a 100%);
+  --fam-surface: #1c1b16;
+  --fam-border: #3a382f;
+  --fam-ink: #e8e3d3;
+  --fam-ink-dim: #8a8577;
+  --fam-primary: #a83232;
+  --fam-primary-hover: #8c2828;
+  --fam-primary-ink: #f3ede0;
+  --fam-accent: #c9b98f;
+  --fam-display-font: "Oswald", sans-serif;
+  --fam-body-font: "Special Elite", "Courier New", monospace;
+  --fam-display-weight: 700;
+  --fam-display-tracking: 0.08em;
+  --fam-display-transform: uppercase;
+  --fam-radius: 0px;
+  --fam-card-border: 1px solid #3a382f;
+  --fam-card-shadow: 6px 6px 0 rgba(0, 0, 0, 0.5);
+  --fam-input-bg: #14130f;
+  --fam-hint-bg: rgba(201, 185, 143, 0.08);
+  --fam-focus-ring: transparent;
+  --fam-glyph-active: "▪";
+  --fam-glyph-locked: "▫";
+  --fam-glyph-solved: "✓";
+}
+
+/* Film-grain overlay across the whole scene. */
+.family-noir-mystery::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Case-file eyebrow + top rule on the brief. */
+.family-noir-mystery .story-block {
+  position: relative;
+  overflow: hidden;
+  border-top: 3px solid var(--fam-primary);
+}
+.family-noir-mystery .story-block::before {
+  content: "CASE FILE";
+  display: block;
+  margin-bottom: 10px;
+  font-family: "Oswald", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.32em;
+  color: var(--fam-primary);
+}
+
+/* Signature: a hard venetian-blind light bar sweeps across the brief once. */
+.family-noir-mystery .story-block::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 60%;
+  background: repeating-linear-gradient(
+    100deg,
+    rgba(255, 250, 235, 0.09) 0 3px,
+    transparent 3px 24px
+  );
+  animation: noir-blinds 2.6s ease-out 1;
+  pointer-events: none;
+}
+@keyframes noir-blinds {
+  from {
+    left: -70%;
+    opacity: 0;
+  }
+  30% {
+    opacity: 1;
+  }
+  to {
+    left: 130%;
+    opacity: 0;
+  }
+}
+
+.family-noir-mystery .puzzle-header h3 {
+  font-size: 19px;
+}
+
+.family-noir-mystery .answer-input {
+  caret-color: var(--fam-primary);
+}
+
+/* =========================================================================
+   3e. NATURE  —  forest night, moss, dappled sun-gold
+   ========================================================================= */
+
+.family-nature {
+  --fam-bg: radial-gradient(circle at 72% 14%, #17301f 0%, #0b130d 76%);
+  --fam-surface: #16211a;
+  --fam-border: #2f4a37;
+  --fam-ink: #e6efe0;
+  --fam-ink-dim: #8fa892;
+  --fam-primary: #6fbf73;
+  --fam-primary-hover: #58a85f;
+  --fam-primary-ink: #06140a;
+  --fam-accent: #e3c65a;
+  --fam-display-font: "Fraunces", Georgia, serif;
+  --fam-body-font: "Nunito", system-ui, sans-serif;
+  --fam-display-weight: 600;
+  --fam-radius: 18px;
+  --fam-input-radius: 12px;
+  --fam-btn-radius: 999px;
+  --fam-card-border: 1px solid #2f4a37;
+  --fam-card-shadow: 0 12px 32px rgba(0, 0, 0, 0.34);
+  --fam-input-bg: #101a13;
+  --fam-hint-bg: rgba(227, 198, 90, 0.1);
+  --fam-focus-ring: rgba(111, 191, 115, 0.22);
+  --fam-glyph-active: "❧";
+  --fam-glyph-locked: "❀";
+  --fam-glyph-solved: "✔";
+}
+
+/* Signature ambient: soft light dapples drift slowly across the canopy. */
+.family-nature::after {
+  content: "";
+  position: fixed;
+  inset: -20%;
+  z-index: 50;
+  pointer-events: none;
+  background: radial-gradient(
+      circle at 20% 30%,
+      rgba(227, 198, 90, 0.1),
+      transparent 22%
+    ),
+    radial-gradient(circle at 70% 55%, rgba(227, 198, 90, 0.08), transparent 20%),
+    radial-gradient(circle at 45% 80%, rgba(111, 191, 115, 0.08), transparent 24%);
+  filter: blur(6px);
+  animation: nature-dapple 16s ease-in-out infinite alternate;
+}
+@keyframes nature-dapple {
+  from {
+    transform: translate3d(-2%, -1%, 0) scale(1);
+  }
+  to {
+    transform: translate3d(3%, 2%, 0) scale(1.08);
+  }
+}
+
+.family-nature .story-block p {
+  font-size: 16px;
+}
+
+.family-nature .puzzle-header h3 {
+  font-size: 18px;
+}
+
+/* Signature: cards unfurl as they come into play. */
+.family-nature .puzzle-card.is-active {
+  animation: nature-unfurl 0.7s cubic-bezier(0.22, 1, 0.36, 1) 1;
+  transform-origin: top center;
+}
+@keyframes nature-unfurl {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scaleY(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+  }
+}
+
+.family-nature .btn-primary {
+  font-weight: 700;
+}
+
+/* =========================================================================
+   3f. CYBERPUNK  —  neon signage: hot magenta + acid cyan on black
+   ========================================================================= */
+
+.family-cyberpunk {
+  --fam-bg: #05060a;
+  --fam-surface: #0c0e17;
+  --fam-border: #2a2350;
+  --fam-ink: #eae6ff;
+  --fam-ink-dim: #8a83c0;
+  --fam-primary: #ff2e97;
+  --fam-primary-hover: #e01f82;
+  --fam-primary-ink: #12030a;
+  --fam-accent: #23e0e0;
+  --fam-display-font: "Rajdhani", system-ui, sans-serif;
+  --fam-body-font: "Share Tech Mono", monospace;
+  --fam-display-weight: 700;
+  --fam-display-tracking: 0.1em;
+  --fam-display-transform: uppercase;
+  --fam-radius: 0px;
+  --fam-card-border: 1px solid #2a2350;
+  --fam-card-shadow: 0 0 18px rgba(255, 46, 151, 0.06);
+  --fam-input-bg: #090a12;
+  --fam-hint-bg: rgba(35, 224, 224, 0.08);
+  --fam-focus-ring: rgba(255, 46, 151, 0.3);
+  --fam-glyph-active: "◈";
+  --fam-glyph-locked: "◇";
+  --fam-glyph-solved: "◆";
+}
+
+/* Neon glow rising from the grid floor. */
+.family-cyberpunk::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    180deg,
+    transparent 55%,
+    rgba(35, 224, 224, 0.06) 82%,
+    rgba(255, 46, 151, 0.05) 100%
+  );
+}
+.family-cyberpunk::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+      90deg,
+      rgba(255, 46, 151, 0.05) 0 1px,
+      transparent 1px 46px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(35, 224, 224, 0.04) 0 1px,
+      transparent 1px 46px
+    );
+  mask-image: linear-gradient(180deg, transparent 40%, #000 100%);
+}
+
+.family-cyberpunk .story-block {
+  border-left: 3px solid var(--fam-primary);
+}
+
+.family-cyberpunk .puzzle-card.is-active {
+  border-color: var(--fam-primary);
+  box-shadow: 0 0 16px rgba(255, 46, 151, 0.18),
+    inset 0 0 0 1px rgba(255, 46, 151, 0.25);
+}
+
+/* Signature: RGB-split glitch jitter on the active card's title. */
+.family-cyberpunk .puzzle-card.is-active .puzzle-header h3 {
+  text-shadow: 1.5px 0 rgba(35, 224, 224, 0.7), -1.5px 0 rgba(255, 46, 151, 0.7);
+  animation: cyber-glitch 3.6s steps(1) infinite;
+}
+@keyframes cyber-glitch {
+  0%,
+  92%,
+  100% {
+    transform: translate(0, 0);
+    text-shadow: 1.5px 0 rgba(35, 224, 224, 0.7),
+      -1.5px 0 rgba(255, 46, 151, 0.7);
+  }
+  93% {
+    transform: translate(-2px, 0);
+    text-shadow: 3px 0 rgba(35, 224, 224, 0.9), -3px 0 rgba(255, 46, 151, 0.9);
+  }
+  95% {
+    transform: translate(2px, 0);
+    text-shadow: -2px 0 rgba(35, 224, 224, 0.9), 2px 0 rgba(255, 46, 151, 0.9);
+  }
+  97% {
+    transform: translate(-1px, 0);
+  }
+}
+
+.family-cyberpunk .btn-primary {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  box-shadow: 0 0 14px rgba(255, 46, 151, 0.4);
+}
+
+/* ---- 4. Reduced-motion guard ---------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .room-screen[data-family]::before,
+  .room-screen[data-family]::after,
+  .room-screen[data-family] .puzzle-card,
+  .room-screen[data-family] .puzzle-card::after,
+  .room-screen[data-family] .story-block::after,
+  .room-screen[data-family] .puzzle-card.is-active .puzzle-header h3 {
+    animation: none !important;
+  }
+}

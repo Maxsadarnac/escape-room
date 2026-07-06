@@ -1,0 +1,280 @@
+/* =========================================================================
+   3D room screen chrome: full-bleed canvas stage, HUD, story-brief overlay,
+   puzzle modal, and in-scene hover labels. Everything consumes the same
+   --fam-* tokens families.css defines, so all six families style this
+   chrome for free.
+
+   Stacking: canvas stage 0 · HUD 30 · overlays 40 · families.css fixed
+   atmosphere layers (scanlines, grain, vignette) sit at 50 with
+   pointer-events none, so they wash over the HUD and modals — deliberate.
+   ========================================================================= */
+
+.room-screen--3d {
+  display: block;
+  height: 100vh;
+  min-height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}
+
+.room3d-stage {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.room3d-stage canvas {
+  display: block;
+  touch-action: none;
+}
+
+/* ---- HUD -------------------------------------------------------------- */
+
+.room3d-hud {
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+}
+
+.room3d-hud-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 22px;
+}
+
+.room3d-hud-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.room3d-theme {
+  font-family: var(--fam-display-font);
+  font-weight: var(--fam-display-weight, 600);
+  letter-spacing: var(--fam-display-tracking, normal);
+  text-transform: var(--fam-display-transform, none);
+  color: var(--fam-ink);
+  font-size: 15px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--fam-surface) 78%, transparent);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 44vw;
+}
+
+.room3d-progress {
+  font-family: var(--fam-display-font);
+  letter-spacing: var(--fam-display-tracking, normal);
+  text-transform: var(--fam-display-transform, none);
+  color: var(--fam-primary);
+  font-size: 14px;
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--fam-surface) 78%, transparent);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  backdrop-filter: blur(6px);
+  white-space: nowrap;
+}
+
+.room3d-hud-btn {
+  pointer-events: auto;
+}
+
+.room3d-skip {
+  position: absolute;
+  right: 22px;
+  bottom: 22px;
+}
+
+.room3d-hint {
+  position: absolute;
+  left: 50%;
+  bottom: 26px;
+  transform: translateX(-50%);
+  font-family: var(--fam-body-font);
+  color: var(--fam-ink-dim);
+  font-size: 13px;
+  padding: 8px 16px;
+  background: color-mix(in srgb, var(--fam-surface) 72%, transparent);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  backdrop-filter: blur(6px);
+  animation: room3d-hint-in 0.8s ease-out both;
+  white-space: nowrap;
+}
+
+@keyframes room3d-hint-in {
+  from { opacity: 0; transform: translate(-50%, 8px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ---- Overlays (brief + puzzle modal) ----------------------------------- */
+
+.room3d-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(4px);
+  animation: room3d-fade-in 0.25s ease-out both;
+  overflow-y: auto;
+}
+
+@keyframes room3d-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.room3d-brief {
+  width: min(680px, 94vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.room3d-brief .story-block {
+  width: 100%;
+  padding: 24px;
+}
+
+.room3d-modal {
+  width: min(720px, 94vw);
+  max-height: calc(100vh - 60px);
+  overflow-y: auto;
+  background: var(--fam-surface);
+  border: var(--fam-card-border);
+  border-radius: var(--fam-radius);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6), var(--fam-card-shadow, 0 0 0 transparent);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  animation: room3d-modal-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes room3d-modal-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.room3d-modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.room3d-modal-head h2 {
+  font-family: var(--fam-display-font);
+  font-weight: var(--fam-display-weight, 600);
+  letter-spacing: var(--fam-display-tracking, normal);
+  text-transform: var(--fam-display-transform, none);
+  color: var(--fam-ink);
+  font-size: 20px;
+}
+
+.room3d-close {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--fam-border);
+  border-radius: var(--fam-btn-radius, var(--fam-radius));
+  color: var(--fam-ink-dim);
+  font-size: 15px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.room3d-close:hover {
+  color: var(--fam-primary);
+  border-color: var(--fam-primary);
+}
+
+.room3d-requires {
+  font-family: var(--fam-body-font);
+  color: var(--fam-accent);
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--fam-hint-bg);
+  border-radius: var(--fam-input-radius, var(--fam-radius));
+}
+
+/* The modal embeds a PuzzleCard; it already carries family styling. */
+.room3d-modal .puzzle-card {
+  padding: 18px;
+}
+
+/* ---- In-scene hover labels (drei Html) ---------------------------------- */
+
+.obj-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 13px;
+  background: color-mix(in srgb, var(--fam-surface) 85%, transparent);
+  border: 1px solid var(--fam-primary);
+  border-radius: var(--fam-radius);
+  pointer-events: none;
+  white-space: nowrap;
+  transform: translateZ(0);
+}
+
+.obj-label-name {
+  font-family: var(--fam-display-font);
+  font-weight: var(--fam-display-weight, 600);
+  letter-spacing: var(--fam-display-tracking, normal);
+  text-transform: var(--fam-display-transform, none);
+  color: var(--fam-ink);
+  font-size: 14px;
+}
+
+.obj-label-state {
+  font-family: var(--fam-body-font);
+  color: var(--fam-primary);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.obj-label--locked {
+  border-color: var(--fam-border);
+}
+
+.obj-label--locked .obj-label-state {
+  color: var(--fam-ink-dim);
+}
+
+.obj-label--solved {
+  border-color: var(--fam-accent);
+}
+
+.obj-label--solved .obj-label-state {
+  color: var(--fam-accent);
+}
+
+/* ---- Reduced motion ------------------------------------------------------ */
+
+@media (prefers-reduced-motion: reduce) {
+  .room3d-hint,
+  .room3d-overlay,
+  .room3d-modal {
+    animation: none !important;
+  }
+}
