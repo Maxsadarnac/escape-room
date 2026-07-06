@@ -30,6 +30,47 @@ function desaturate(hex, satScale, lightScale) {
   return c;
 }
 
+/* ---- Per-family material finish -----------------------------------------
+   Applied once to every prop material: technical families read metallic
+   and machined, organic/period families read matte.                        */
+
+export const FAMILY_FINISH = {
+  "sci-fi": { metalBoost: 0.3, roughShift: -0.18 },
+  cyberpunk: { metalBoost: 0.35, roughShift: -0.22 },
+  "noir-mystery": { metalBoost: 0.12, roughShift: -0.05 },
+  fantasy: { metalBoost: 0.05, roughShift: 0.02 },
+  "horror-gothic": { metalBoost: 0, roughShift: 0.04 },
+  nature: { metalBoost: 0, roughShift: 0.05 },
+};
+
+/* ---- scene.mood adjustments ----------------------------------------------
+   The generator's free-text mood ("eerie, cold, abandoned...") nudges the
+   light rig so two rooms of the same family still feel different.          */
+
+const MOOD_KEYWORDS = [
+  { re: /cold|icy|frozen|chill|sterile/, warmth: -1 },
+  { re: /warm|cozy|hearth|golden|sunlit/, warmth: +1 },
+  { re: /eerie|dread|haunt|ominous|sinister|decay/, gloom: +1 },
+  { re: /bright|hopeful|serene|tranquil|airy/, gloom: -1 },
+  { re: /urgent|tense|alarm|frantic|danger/, urgency: +1 },
+];
+
+export function moodAdjust(moodText) {
+  const out = { warmth: 0, gloom: 0, urgency: 0 };
+  const text = typeof moodText === "string" ? moodText.toLowerCase() : "";
+  for (const kw of MOOD_KEYWORDS) {
+    if (kw.re.test(text)) {
+      if (kw.warmth) out.warmth += kw.warmth;
+      if (kw.gloom) out.gloom += kw.gloom;
+      if (kw.urgency) out.urgency += kw.urgency;
+    }
+  }
+  return out;
+}
+
+const WARM_TINT = new THREE.Color("#ffb066");
+const COOL_TINT = new THREE.Color("#7ab8ff");
+
 /* ---- Prop state palettes ------------------------------------------------ */
 
 /**
@@ -37,8 +78,19 @@ function desaturate(hex, satScale, lightScale) {
  * Roles map to material userData.role tags inside the archetypes:
  *   body  — structural mass       panel — secondary surfaces
  *   glow  — bright emissive parts glowSoft — dim emissive details
+ * `tint` (a scene.palette color) gives each room's props their own cast.
  */
-export function propStatePalette(tokens, state) {
+export function propStatePalette(tokens, state, tint) {
+  const palette = baseStatePalette(tokens, state);
+  if (tint && (state === "active" || state === "solved")) {
+    const tintCol = col(tint);
+    palette.body.lerp(tintCol, 0.13);
+    palette.panel.lerp(tintCol, 0.08);
+  }
+  return palette;
+}
+
+function baseStatePalette(tokens, state) {
   switch (state) {
     case "locked":
       return {
@@ -67,11 +119,11 @@ export function propStatePalette(tokens, state) {
     case "active":
     default:
       return {
-        body: col(tokens.border),
-        panel: lighten(tokens.surface, 0.08),
+        body: col(tokens.border).lerp(col(tokens.primary), 0.1),
+        panel: lighten(tokens.surface, 0.12),
         glow: col(tokens.primary),
-        glowIntensity: 1.7,
-        softIntensity: 0.7,
+        glowIntensity: 2.1,
+        softIntensity: 0.85,
       };
   }
 }
@@ -82,29 +134,61 @@ export function propStatePalette(tokens, state) {
  * Build the full 3D mood for a family from its (CSS-derived) tokens.
  * All `start` values apply at progress 0, `end` at progress 1 (all solved);
  * light components lerp between them as puzzles are solved.
+ * `options.moodText` (scene.mood) and `options.paletteHints` (scene.palette)
+ * post-adjust the rig so every generated room has its own cast.
  */
-export function buildMood(family, tokens) {
+export function buildMood(family, tokens, options = {}) {
+  const mood = baseMood(family, tokens);
+  const adj = moodAdjust(options.moodText);
+
+  if (adj.warmth !== 0) {
+    const tint = adj.warmth > 0 ? WARM_TINT : COOL_TINT;
+    const amt = Math.min(Math.abs(adj.warmth), 2) * 0.16;
+    mood.ambient.color.lerp(tint, amt);
+    mood.key.colorStart.lerp(tint, amt * 0.7);
+  }
+  if (adj.gloom !== 0) {
+    const mult = 1 - Math.min(Math.max(adj.gloom, -2), 2) * 0.14;
+    mood.ambient.start *= mult;
+    mood.key.start *= Math.max(mult, 0.7);
+  }
+  if (adj.urgency > 0) {
+    for (const a of mood.accents) a.pulse = Math.min((a.pulse || 0) + 0.18, 0.7);
+  }
+
+  const cast = options.paletteHints?.[0];
+  if (cast) {
+    const castCol = col(cast);
+    mood.shell.wall.lerp(castCol, 0.09);
+    mood.shell.floor.lerp(castCol, 0.06);
+    mood.fog.color.lerp(castCol, 0.05);
+  }
+  return mood;
+}
+
+function baseMood(family, tokens) {
   const fam = normalizeFamily(family);
   const shell = {
     floor: darken(tokens.surface, 0.2),
-    wall: lighten(tokens.surface, 0.16),
+    wall: lighten(tokens.surface, 0.11),
     ceiling: darken(tokens.surface, 0.42),
     trim: col(tokens.border),
   };
 
   switch (fam) {
     case "sci-fi":
-      // Harsh amber emergency lighting calms toward cool cyan/white.
+      // Cold, hard instrumentation light; the amber emergency accent pulses
+      // in a corner and dies away as systems come back online.
       return {
         shell,
         fog: { color: darken(tokens.surface, 0.55), near: 10, far: 30 },
-        ambient: { color: lighten(tokens.surface, 0.3), start: 0.22, end: 0.5 },
+        ambient: { color: lighten(tokens.surface, 0.35), start: 0.3, end: 0.52 },
         key: {
           position: [4, 4.4, 2],
-          colorStart: col(tokens.accent),
-          colorEnd: lighten(tokens.primary, 0.4),
-          start: 1.6,
-          end: 2.4,
+          colorStart: lighten(tokens.primary, 0.55),
+          colorEnd: lighten(tokens.primary, 0.25),
+          start: 1.7,
+          end: 2.6,
           shadows: true,
         },
         accents: [

@@ -503,19 +503,22 @@ export default function Room3D({
   onSelectObject,
   reducedMotion,
 }) {
-  const mood = useMemo(() => buildMood(family, tokens), [family, tokens]);
+  const paletteHints = useMemo(() => {
+    const raw = room?.scene?.palette;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((c) => typeof c === "string" && /^#[0-9a-fA-F]{3,8}$/.test(c.trim()));
+  }, [room]);
+
+  const mood = useMemo(
+    () => buildMood(family, tokens, { moodText: room?.scene?.mood, paletteHints }),
+    [family, tokens, room, paletteHints]
+  );
   const progress = room.puzzles.length > 0 ? solved.size / room.puzzles.length : 0;
 
   const requiresById = useMemo(
     () => new Map(room.puzzles.map((p) => [p.id, Array.isArray(p.requires) ? p.requires : []])),
     [room]
   );
-
-  const paletteHints = useMemo(() => {
-    const raw = room?.scene?.palette;
-    if (!Array.isArray(raw)) return [];
-    return raw.filter((c) => typeof c === "string" && /^#[0-9a-fA-F]{3,8}$/.test(c.trim()));
-  }, [room]);
 
   const sceneCtx = useMemo(
     () => ({ reducedMotion, paletteHints }),
@@ -565,6 +568,7 @@ export default function Room3D({
             prop={prop}
             state={stateFor(prop)}
             tokens={tokens}
+            family={family}
             enabled={phase === "live"}
             onSelect={onSelectObject}
           />

@@ -16,7 +16,7 @@ import { useFrame } from "@react-three/fiber";
 import { Html, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { SceneContext } from "./SceneContext";
-import { propStatePalette } from "./familyPresets";
+import { FAMILY_FINISH, propStatePalette } from "./familyPresets";
 
 /* ---- Material helper ---------------------------------------------------- */
 
@@ -410,8 +410,8 @@ const BLACK = new THREE.Color("#000000");
  * Wraps an archetype with state-driven materials, hover highlight + label,
  * solve pulse, and a floor hover-ring. `state`: locked|active|solved|decor.
  */
-export function InteractiveProp({ prop, state, tokens, enabled, onSelect }) {
-  const { reducedMotion } = useContext(SceneContext);
+export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect }) {
+  const { reducedMotion, paletteHints } = useContext(SceneContext);
   const groupRef = useRef();
   const scaleRef = useRef();
   const ringMatRef = useRef();
@@ -423,22 +423,31 @@ export function InteractiveProp({ prop, state, tokens, enabled, onSelect }) {
   const def = ARCHETYPES[prop.archetype] || ARCHETYPES.pedestal;
   const clickable = enabled && prop.interactive;
 
+  // Each prop deterministically picks one scene.palette color as its cast.
+  const tint = paletteHints.length > 0
+    ? paletteHints[Math.floor(prop.seed * paletteHints.length) % paletteHints.length]
+    : null;
+
   const targets = useMemo(() => {
-    const p = propStatePalette(tokens, state);
+    const p = propStatePalette(tokens, state, tint);
     return { ...p, glowBase: p.glow.clone().multiplyScalar(0.12) };
-  }, [tokens, state]);
+  }, [tokens, state, tint]);
 
   // Collect role-tagged materials once; archetype geometry is static.
+  // The family finish (metallic vs matte) is baked in at the same time.
   useEffect(() => {
+    const finish = FAMILY_FINISH[family] || { metalBoost: 0, roughShift: 0 };
     const mats = [];
     groupRef.current?.traverse((o) => {
       if (o.isMesh && o.material?.userData?.role && o.material.userData.role !== "tinted") {
+        o.material.metalness = THREE.MathUtils.clamp(o.material.metalness + finish.metalBoost, 0, 1);
+        o.material.roughness = THREE.MathUtils.clamp(o.material.roughness + finish.roughShift, 0.05, 1);
         mats.push(o.material);
       }
     });
     materialsRef.current = mats;
     animRef.current.snapped = false;
-  }, []);
+  }, [family]);
 
   // Solve flourish: pulse once on active -> solved.
   useEffect(() => {
