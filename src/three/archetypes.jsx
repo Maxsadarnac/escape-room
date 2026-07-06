@@ -415,6 +415,7 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
   const groupRef = useRef();
   const scaleRef = useRef();
   const ringMatRef = useRef();
+  const ringMeshRef = useRef();
   const materialsRef = useRef([]);
   const animRef = useRef({ hover: 0, pulse: 0, snapped: false });
   const prevStateRef = useRef(state);
@@ -458,15 +459,25 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
     animRef.current.snapped = false; // re-converge quickly on any state change
   }, [state]);
 
-  useFrame((_, dt) => {
+  useFrame((frame, dt) => {
     const anim = animRef.current;
     const k = anim.snapped ? 1 - Math.exp(-7 * Math.min(dt, 0.1)) : 1;
+    const t = frame.clock.elapsedTime;
 
     anim.hover = THREE.MathUtils.lerp(anim.hover, hovered && clickable ? 1 : 0, k);
     if (anim.pulse > 0) anim.pulse = Math.max(0, anim.pulse - dt * 1.4);
     const pulseWave = reducedMotion ? 0 : Math.sin(anim.pulse * Math.PI) * anim.pulse;
 
-    const glowMult = 1 + anim.hover * 0.9 + pulseWave * 2.2;
+    // Idle life: active objects breathe their glow; locked ones carry a
+    // faint slow heartbeat under the dimming so they read "sealed", not
+    // "broken". Phase-shifted per prop so the room never pulses in sync.
+    let breathe = 1;
+    if (!reducedMotion) {
+      if (state === "active") breathe = 1 + 0.16 * Math.sin(t * 1.7 + prop.seed * Math.PI * 2);
+      else if (state === "locked") breathe = 1 + 0.45 * Math.sin(t * 0.85 + prop.seed * Math.PI * 2);
+    }
+
+    const glowMult = (1 + anim.hover * 0.9 + pulseWave * 2.2) * breathe;
     for (const m of materialsRef.current) {
       const role = m.userData.role;
       if (role === "body") m.color.lerp(targets.body, k);
@@ -490,11 +501,16 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
       const s = 1 + anim.hover * 0.035 + pulseWave * 0.09;
       scaleRef.current.scale.setScalar(s);
     }
-    if (ringMatRef.current) {
+    if (ringMatRef.current && ringMeshRef.current) {
+      // The floor ring doubles as the solve ripple: it flares and expands
+      // outward once as the pulse decays, then returns to hover duty.
       ringMatRef.current.opacity = THREE.MathUtils.lerp(
-        ringMatRef.current.opacity, anim.hover * 0.45, k
+        ringMatRef.current.opacity,
+        Math.max(anim.hover * 0.45, pulseWave * 0.6),
+        k
       );
       ringMatRef.current.color.lerp(targets.glow, k);
+      ringMeshRef.current.scale.setScalar(anim.pulse > 0 ? 1 + (1 - anim.pulse) * 1.15 : 1);
     }
     anim.snapped = true;
   });
@@ -536,8 +552,8 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
         <def.Component seed={prop.seed} />
       </group>
 
-      {/* hover ring on the floor */}
-      <mesh position={[0, ringY, ringZ]} rotation={[-Math.PI / 2, 0, 0]}>
+      {/* hover ring on the floor (also the solve ripple) */}
+      <mesh ref={ringMeshRef} position={[0, ringY, ringZ]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[0.72, 0.86, 40]} />
         <meshBasicMaterial ref={ringMatRef} transparent opacity={0} depthWrite={false} />
       </mesh>
