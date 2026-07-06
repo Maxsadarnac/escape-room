@@ -181,7 +181,7 @@ function baseMood(family, tokens) {
       // in a corner and dies away as systems come back online.
       return {
         shell,
-        fog: { color: darken(tokens.surface, 0.55), near: 10, far: 30 },
+        fog: { color: darken(tokens.surface, 0.42), near: 9, far: 26 },
         ambient: { color: lighten(tokens.surface, 0.35), start: 0.3, end: 0.52 },
         key: {
           position: [4, 4.4, 2],
@@ -202,7 +202,7 @@ function baseMood(family, tokens) {
       // Warm hearth-glow deepens into radiant gold as magic awakens.
       return {
         shell,
-        fog: { color: darken(tokens.surface, 0.45), near: 11, far: 32 },
+        fog: { color: darken(tokens.surface, 0.34), near: 10, far: 28 },
         ambient: { color: lighten(tokens.primary, 0.55), start: 0.3, end: 0.55 },
         key: {
           position: [-3, 4.2, 3],
@@ -218,12 +218,17 @@ function baseMood(family, tokens) {
         ],
         flicker: 0.12,
         dust: { color: tokens.primary, count: 70, size: 2.2, speed: 0.22, opacity: 0.5 },
+        // embers rising from the two braziers
+        extra: [
+          { position: [-5.5, 1.9, -4.3], scale: [1.1, 1.7, 1.1], count: 14, size: 2.4, speed: 0.55, opacity: 0.7, color: tokens.primary },
+          { position: [5.5, 1.9, -4.3], scale: [1.1, 1.7, 1.1], count: 14, size: 2.4, speed: 0.55, opacity: 0.7, color: tokens.primary },
+        ],
       };
     case "horror-gothic":
       // Oppressive candle-lit dark; each solve lifts the gloom a little.
       return {
         shell,
-        fog: { color: col("#050304"), near: 6, far: 22 },
+        fog: { color: col("#0d0705"), near: 5, far: 19 },
         ambient: { color: lighten(tokens.surface, 0.2), start: 0.14, end: 0.34 },
         key: {
           position: [0, 3.8, 1.5],
@@ -238,14 +243,20 @@ function baseMood(family, tokens) {
           { position: [6.5, 1.4, 4.5], color: col(tokens.accent), start: 0.35, end: 1.6, distance: 11 },
         ],
         flicker: 0.55,
-        dust: { color: tokens.inkDim, count: 40, size: 1.8, speed: 0.12, opacity: 0.25 },
+        dust: { color: tokens.inkDim, count: 24, size: 1.8, speed: 0.1, opacity: 0.18 },
+        // motes caught only in the candle glow
+        extra: [
+          { position: [-6.6, 0.9, -4.8], scale: [1.1, 1.4, 1.1], count: 10, size: 1.7, speed: 0.09, opacity: 0.35, color: "#e8a04c" },
+          { position: [6.6, 0.9, 4.6], scale: [1.1, 1.4, 1.1], count: 10, size: 1.7, speed: 0.09, opacity: 0.35, color: "#e8a04c" },
+          { position: [-6.4, 0.9, 4.7], scale: [1.1, 1.4, 1.1], count: 10, size: 1.7, speed: 0.09, opacity: 0.35, color: "#e8a04c" },
+        ],
       };
     case "noir-mystery":
       // One hard white key through the blinds; fill rises as the case cracks.
       return {
         shell,
-        fog: { color: darken(tokens.surface, 0.5), near: 10, far: 30 },
-        ambient: { color: col(tokens.accent), start: 0.1, end: 0.32 },
+        fog: { color: darken(tokens.surface, 0.38), near: 9, far: 27 },
+        ambient: { color: col(tokens.accent), start: 0.5, end: 0.66 },
         key: {
           position: [-6.5, 3.6, -2],
           colorStart: col("#f2ead6"),
@@ -255,17 +266,22 @@ function baseMood(family, tokens) {
           shadows: true,
         },
         accents: [
-          { position: [6, 2.6, 4], color: col(tokens.accent), start: 0.2, end: 1.5, distance: 13 },
-          { position: [0, 4.2, 0], color: col(tokens.primary), start: 0.35, end: 0.9, distance: 8 },
+          // warm bounce on the far side + the bare bulb over the desk area
+          { position: [6, 2.6, 4], color: col(tokens.accent), start: 0.9, end: 1.7, distance: 13 },
+          { position: [0.8, 3.6, 0.6], color: col("#f2e6c8"), start: 0.8, end: 1.2, distance: 9 },
         ],
         flicker: 0.06,
-        dust: { color: tokens.accent, count: 60, size: 1.5, speed: 0.1, opacity: 0.4 },
+        dust: { color: tokens.accent, count: 30, size: 1.4, speed: 0.08, opacity: 0.25 },
+        // dust hanging in the venetian window shaft
+        extra: [
+          { position: [-6.1, 3.0, -2], scale: [2.6, 2.2, 1.7], count: 46, size: 1.7, speed: 0.05, opacity: 0.55, color: "#f2ead6" },
+        ],
       };
     case "nature":
       // Forest dusk warming toward dappled golden morning.
       return {
         shell,
-        fog: { color: darken(tokens.surface, 0.4), near: 11, far: 32 },
+        fog: { color: darken(tokens.surface, 0.3), near: 10, far: 28 },
         ambient: { color: col(tokens.primary), start: 0.28, end: 0.5 },
         key: {
           position: [5, 4.4, -2],
@@ -280,14 +296,19 @@ function baseMood(family, tokens) {
           { position: [3, 1.2, 4.5], color: col(tokens.accent), start: 0.5, end: 1.4, distance: 10 },
         ],
         flicker: 0.05,
-        dust: { color: tokens.accent, count: 90, size: 2.4, speed: 0.35, opacity: 0.55 },
+        dust: { color: tokens.accent, count: 60, size: 2.4, speed: 0.35, opacity: 0.5 },
+        // fireflies gathering under the canopy corners
+        extra: [
+          { position: [-6.3, 3.9, -4.4], scale: [1.8, 1.4, 1.8], count: 16, size: 2.8, speed: 0.5, opacity: 0.8, color: tokens.accent },
+          { position: [6.3, 3.9, 4.4], scale: [1.8, 1.4, 1.8], count: 16, size: 2.8, speed: 0.5, opacity: 0.8, color: tokens.accent },
+        ],
       };
     case "cyberpunk":
     default:
       // Dueling magenta/cyan neon that surges brighter with progress.
       return {
         shell,
-        fog: { color: col("#04050a"), near: 9, far: 28 },
+        fog: { color: col("#0a0716"), near: 8, far: 24 },
         ambient: { color: col(tokens.inkDim), start: 0.14, end: 0.3 },
         key: {
           position: [0, 4.5, 3],
@@ -303,6 +324,10 @@ function baseMood(family, tokens) {
         ],
         flicker: 0.14,
         dust: { color: tokens.accent, count: 55, size: 1.5, speed: 0.4, opacity: 0.35 },
+        // neon haze pooling at floor level
+        extra: [
+          { position: [0, 0.55, 0], scale: [13, 0.9, 9], count: 34, size: 1.5, speed: 0.12, opacity: 0.22, color: tokens.primary },
+        ],
       };
   }
 }

@@ -551,15 +551,29 @@ export default function Room3D({
         <Decor tokens={tokens} />
 
         {!reducedMotion && (
-          <Sparkles
-            count={mood.dust.count}
-            scale={[width - 3, 3.6, depth - 3]}
-            position={[0, 2.2, 0]}
-            size={mood.dust.size}
-            speed={mood.dust.speed}
-            opacity={mood.dust.opacity}
-            color={mood.dust.color}
-          />
+          <>
+            <Sparkles
+              count={mood.dust.count}
+              scale={[width - 3, 3.6, depth - 3]}
+              position={[0, 2.2, 0]}
+              size={mood.dust.size}
+              speed={mood.dust.speed}
+              opacity={mood.dust.opacity}
+              color={mood.dust.color}
+            />
+            {(mood.extra || []).map((v, i) => (
+              <Sparkles
+                key={i}
+                count={v.count}
+                scale={v.scale}
+                position={v.position}
+                size={v.size}
+                speed={v.speed}
+                opacity={v.opacity}
+                color={v.color}
+              />
+            ))}
+          </>
         )}
 
         {layout.map((prop) => (
