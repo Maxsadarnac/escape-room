@@ -7,7 +7,7 @@
    itself registers the player's advance.
    ========================================================================= */
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
@@ -29,10 +29,14 @@ const INTRO_DURATION = 4.8;
 
 const smootherstep = (t) => t * t * t * (t * (6 * t - 15) + 10);
 
-function CameraRig({ phase, onIntroDone }) {
+function CameraRig({ phase, onIntroDone, focusProp, reducedMotion }) {
   const camera = useThree((s) => s.camera);
+  const controlsRef = useRef();
   const tRef = useRef(0);
   const doneRef = useRef(false);
+  // Focus glide state: where to return to, and the damped look-at point.
+  const focusRef = useRef({ saved: null, look: new THREE.Vector3().copy(ORBIT_TARGET) });
+  const [returning, setReturning] = useState(false);
   const curve = useMemo(
     () =>
       new THREE.CatmullRomCurve3(
@@ -62,7 +66,9 @@ function CameraRig({ phase, onIntroDone }) {
     if (phase === "waiting") {
       camera.position.copy(curve.getPoint(0));
       camera.lookAt(ORBIT_TARGET);
-    } else if (phase === "intro" && tRef.current < 1) {
+      return;
+    }
+    if (phase === "intro" && tRef.current < 1) {
       tRef.current = Math.min(1, tRef.current + Math.min(dt, 0.1) / INTRO_DURATION);
       camera.position.copy(curve.getPoint(smootherstep(tRef.current)));
       camera.lookAt(ORBIT_TARGET);
@@ -70,13 +76,58 @@ function CameraRig({ phase, onIntroDone }) {
         doneRef.current = true;
         onIntroDone();
       }
+      return;
+    }
+    if (phase !== "live" || reducedMotion) return;
+
+    // Focus glide: dolly toward a clicked object, hold while its puzzle is
+    // open, glide home when it closes, then hand back to OrbitControls.
+    const f = focusRef.current;
+    const k = 1 - Math.exp(-3.4 * Math.min(dt, 0.1));
+    if (focusProp) {
+      if (!f.saved && controlsRef.current) {
+        f.saved = {
+          pos: camera.position.clone(),
+          target: controlsRef.current.target.clone(),
+        };
+        f.look.copy(f.saved.target);
+        if (returning) setReturning(false);
+      }
+      const objCenter = new THREE.Vector3(
+        focusProp.position[0],
+        focusProp.position[1] + (focusProp.wallMounted ? 0 : 1.0),
+        focusProp.position[2]
+      );
+      // Stand 2.7m off the prop's front (its front already faces inward).
+      const front = new THREE.Vector3(
+        Math.sin(focusProp.rotationY), 0, Math.cos(focusProp.rotationY)
+      );
+      const goal = objCenter.clone().addScaledVector(front, 2.7);
+      goal.y = THREE.MathUtils.clamp(objCenter.y + 0.9, 1.7, 3.2);
+      camera.position.lerp(goal, k);
+      f.look.lerp(objCenter, k);
+      camera.lookAt(f.look);
+    } else if (f.saved) {
+      if (!returning) setReturning(true);
+      camera.position.lerp(f.saved.pos, k);
+      f.look.lerp(f.saved.target, k);
+      camera.lookAt(f.look);
+      if (camera.position.distanceTo(f.saved.pos) < 0.06 && controlsRef.current) {
+        controlsRef.current.target.copy(f.saved.target);
+        controlsRef.current.update();
+        f.saved = null;
+        setReturning(false);
+      }
     }
   });
 
+  const gliding = Boolean(focusProp) || returning;
+
   return (
     <OrbitControls
+      ref={controlsRef}
       makeDefault
-      enabled={phase === "live"}
+      enabled={phase === "live" && (reducedMotion || !gliding)}
       enableDamping
       dampingFactor={0.08}
       enablePan={false}
@@ -501,6 +552,7 @@ export default function Room3D({
   phase,
   onIntroDone,
   onSelectObject,
+  focusProp,
   reducedMotion,
 }) {
   const paletteHints = useMemo(() => {
@@ -588,7 +640,25 @@ export default function Room3D({
           />
         ))}
 
-        <CameraRig phase={phase} onIntroDone={onIntroDone} />
+        {/* finale: the room celebrates while the completion screen holds off */}
+        {progress >= 1 && !reducedMotion && (
+          <Sparkles
+            count={90}
+            scale={[7, 3.4, 6]}
+            position={[0, 2.1, 0]}
+            size={4.2}
+            speed={1.1}
+            opacity={0.8}
+            color={tokens.accent}
+          />
+        )}
+
+        <CameraRig
+          phase={phase}
+          onIntroDone={onIntroDone}
+          focusProp={focusProp}
+          reducedMotion={reducedMotion}
+        />
       </SceneContext.Provider>
     </Canvas>
   );

@@ -137,6 +137,11 @@
   to { opacity: 1; }
 }
 
+/* Puzzle overlay holds back while the camera glides to the object. */
+.room3d-overlay--glide {
+  animation: room3d-fade-in 0.3s ease-out 0.55s both;
+}
+
 .room3d-brief {
   width: min(680px, 94vw);
   display: flex;

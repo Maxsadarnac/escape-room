@@ -151,6 +151,7 @@ export default function RoomScreen({ room, solved, hintsRevealed, onSolve, onRev
                 phase={phase}
                 onIntroDone={() => setPhase("live")}
                 onSelectObject={handleSelect}
+                focusProp={selection ? selection.prop : null}
                 reducedMotion={reducedMotion}
               />
             </Suspense>
@@ -207,7 +208,10 @@ export default function RoomScreen({ room, solved, hintsRevealed, onSolve, onRev
 
       {/* Puzzle overlay */}
       {selection && activePuzzle && (
-        <div className="room3d-overlay" onClick={closeOverlay}>
+        <div
+          className={`room3d-overlay${reducedMotion ? "" : " room3d-overlay--glide"}`}
+          onClick={closeOverlay}
+        >
           <div
             className="room3d-modal"
             role="dialog"
