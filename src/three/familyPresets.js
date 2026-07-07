@@ -159,9 +159,9 @@ export function buildMood(family, tokens, options = {}) {
   const cast = options.paletteHints?.[0];
   if (cast) {
     const castCol = col(cast);
-    mood.shell.wall.lerp(castCol, 0.09);
-    mood.shell.floor.lerp(castCol, 0.06);
-    mood.fog.color.lerp(castCol, 0.05);
+    mood.shell.wall.lerp(castCol, 0.16);
+    mood.shell.floor.lerp(castCol, 0.12);
+    mood.fog.color.lerp(castCol, 0.1);
   }
   return mood;
 }
@@ -178,22 +178,25 @@ function baseMood(family, tokens) {
   switch (fam) {
     case "sci-fi":
       // Cold, hard instrumentation light; the amber emergency accent pulses
-      // in a corner and dies away as systems come back online.
+      // in a corner and dies away as systems come back online. Walls stay
+      // near the raw surface tone — the near-white key was washing the whole
+      // shell to beige.
+      shell.wall = lighten(tokens.surface, 0.04);
       return {
         shell,
         fog: { color: darken(tokens.surface, 0.42), near: 9, far: 26 },
-        ambient: { color: lighten(tokens.surface, 0.35), start: 0.3, end: 0.52 },
+        ambient: { color: lighten(tokens.surface, 0.35), start: 0.22, end: 0.46 },
         key: {
           position: [4, 4.4, 2],
-          colorStart: lighten(tokens.primary, 0.55),
-          colorEnd: lighten(tokens.primary, 0.25),
-          start: 1.7,
-          end: 2.6,
+          colorStart: lighten(tokens.primary, 0.3),
+          colorEnd: lighten(tokens.primary, 0.2),
+          start: 1.35,
+          end: 2.4,
           shadows: true,
         },
         accents: [
-          { position: [-6, 3.4, -4], color: col(tokens.accent), start: 1.7, end: 0.12, distance: 14, pulse: 0.5 },
-          { position: [6, 2.8, 4], color: col(tokens.primary), start: 0.9, end: 2.6, distance: 14 },
+          { position: [-6, 3.4, -4], color: col(tokens.accent), start: 1.05, end: 0.12, distance: 10, pulse: 0.5 },
+          { position: [6, 2.8, 4], color: col(tokens.primary), start: 1.2, end: 2.6, distance: 14 },
         ],
         flicker: 0,
         dust: { color: tokens.primary, count: 50, size: 1.6, speed: 0.3, opacity: 0.3 },
@@ -226,10 +229,11 @@ function baseMood(family, tokens) {
       };
     case "horror-gothic":
       // Oppressive candle-lit dark; each solve lifts the gloom a little.
+      // Fog/ambient floors keep object silhouettes readable inside the dread.
       return {
         shell,
-        fog: { color: col("#0d0705"), near: 5, far: 19 },
-        ambient: { color: lighten(tokens.surface, 0.2), start: 0.14, end: 0.34 },
+        fog: { color: col("#0d0705"), near: 5.5, far: 23 },
+        ambient: { color: lighten(tokens.surface, 0.2), start: 0.19, end: 0.38 },
         key: {
           position: [0, 3.8, 1.5],
           colorStart: col("#b05a28"), // candle warmth from the CSS glow layer
@@ -239,8 +243,8 @@ function baseMood(family, tokens) {
           shadows: true,
         },
         accents: [
-          { position: [-6.5, 1.4, -4.5], color: col(tokens.primary), start: 1.2, end: 0.6, distance: 10, pulse: 0.3 },
-          { position: [6.5, 1.4, 4.5], color: col(tokens.accent), start: 0.35, end: 1.6, distance: 11 },
+          { position: [-6.5, 1.4, -4.5], color: col(tokens.primary), start: 1.2, end: 0.6, distance: 12, pulse: 0.3 },
+          { position: [6.5, 1.4, 4.5], color: col(tokens.accent), start: 0.5, end: 1.6, distance: 12 },
         ],
         flicker: 0.55,
         dust: { color: tokens.inkDim, count: 24, size: 1.8, speed: 0.1, opacity: 0.18 },
@@ -278,22 +282,25 @@ function baseMood(family, tokens) {
         ],
       };
     case "nature":
-      // Forest dusk warming toward dappled golden morning.
+      // Forest dusk warming toward dappled golden morning. Ambient is a
+      // desaturated undergrowth green so the gold key carries the contrast —
+      // full-strength primary flattened the whole room into one green.
+      shell.wall = lighten(tokens.surface, 0.03);
       return {
         shell,
         fog: { color: darken(tokens.surface, 0.3), near: 10, far: 28 },
-        ambient: { color: col(tokens.primary), start: 0.28, end: 0.5 },
+        ambient: { color: desaturate(tokens.primary, 0.5, 0.8), start: 0.2, end: 0.44 },
         key: {
           position: [5, 4.4, -2],
           colorStart: col(tokens.accent),
           colorEnd: lighten(tokens.accent, 0.3),
-          start: 1.2,
-          end: 2.6,
+          start: 1.5,
+          end: 2.7,
           shadows: true,
         },
         accents: [
-          { position: [-5.5, 2.4, 4], color: col(tokens.primary), start: 1.0, end: 1.8, distance: 13 },
-          { position: [3, 1.2, 4.5], color: col(tokens.accent), start: 0.5, end: 1.4, distance: 10 },
+          { position: [-5.5, 2.4, 4], color: col(tokens.primary), start: 1.2, end: 1.9, distance: 13 },
+          { position: [3, 1.2, 4.5], color: col(tokens.accent), start: 0.9, end: 1.6, distance: 12 },
         ],
         flicker: 0.05,
         dust: { color: tokens.accent, count: 60, size: 2.4, speed: 0.35, opacity: 0.5 },

@@ -319,7 +319,7 @@ function SciFiDecor({ tokens }) {
       {/* floor locator ring */}
       <mesh position={[0, 0.015, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <ringGeometry args={[1.05, 1.14, 48]} />
-        <meshBasicMaterial color={strip} transparent opacity={0.22} depthWrite={false} />
+        <meshBasicMaterial color={strip} transparent opacity={0.12} depthWrite={false} />
       </mesh>
     </group>
   );
@@ -447,7 +447,7 @@ function NoirDecor({ tokens }) {
 }
 
 function NatureDecor({ tokens }) {
-  const green = new THREE.Color(tokens.primary).multiplyScalar(0.45);
+  const green = new THREE.Color(tokens.primary).multiplyScalar(0.28);
   const vines = [
     [-7.7, 5.6, -3, 1.9],
     [-7.6, 5.6, 2.5, 2.6],
@@ -484,7 +484,7 @@ function NatureDecor({ tokens }) {
       ].map(([x, y, z, r], i) => (
         <mesh key={i} position={[x, y, z]} rotation={[-Math.PI / 2, 0, 0]}>
           <circleGeometry args={[r, 24]} />
-          <meshStandardMaterial color={green} roughness={1} transparent opacity={0.85} />
+          <meshStandardMaterial color={green} roughness={1} transparent opacity={0.5} />
         </mesh>
       ))}
     </group>
@@ -540,6 +540,41 @@ const DECOR = {
   nature: NatureDecor,
   cyberpunk: CyberpunkDecor,
 };
+
+/* ---- Dev probe ------------------------------------------------------------
+   DEV-only bridge for browser-automation tests: projects each prop's anchor
+   point to screen pixels so a driver can aim real pointer events at the
+   canvas (the props live inside WebGL, invisible to DOM selectors).         */
+
+function DevProbe({ layout }) {
+  const camera = useThree((s) => s.camera);
+  const size = useThree((s) => s.size);
+  useEffect(() => {
+    window.__room3dProbe = {
+      props: layout
+        .filter((p) => p.interactive)
+        .map((p) => ({ id: p.id, puzzleId: p.puzzleId, label: p.label })),
+      screenPoint(puzzleId) {
+        const prop = layout.find((p) => p.puzzleId === puzzleId);
+        if (!prop) return null;
+        const v = new THREE.Vector3(
+          prop.position[0],
+          prop.position[1] + (prop.wallMounted ? 0 : 1.0),
+          prop.position[2]
+        ).project(camera);
+        return {
+          x: ((v.x + 1) / 2) * size.width,
+          y: ((1 - v.y) / 2) * size.height,
+          onScreen: v.z < 1 && Math.abs(v.x) < 0.94 && Math.abs(v.y) < 0.9,
+        };
+      },
+    };
+    return () => {
+      delete window.__room3dProbe;
+    };
+  }, [layout, camera, size]);
+  return null;
+}
 
 /* ---- Scene root ---------------------------------------------------------- */
 
@@ -659,6 +694,8 @@ export default function Room3D({
           focusProp={focusProp}
           reducedMotion={reducedMotion}
         />
+
+        {import.meta.env.DEV && <DevProbe layout={layout} />}
       </SceneContext.Provider>
     </Canvas>
   );
