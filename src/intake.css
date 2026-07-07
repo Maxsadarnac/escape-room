@@ -1,0 +1,548 @@
+/* =========================================================================
+   Intake — "The Gamemaster's Threshold"
+
+   Roomcraft brand only (dark / cyan / violet): this screen never wears one
+   of the six room families. Two voices carry the design:
+     · the Gamemaster narrates in Fraunces italic (no bubbles — he speaks
+       into the room)
+     · the machinery (wordmark, seals, build ledger) answers in Share Tech
+       Mono
+   Your own words sit between them in the system hand, as sealed notes.
+   The one loud element is the build ledger: real pipeline stages with a
+   cyan→violet seam that fills as the door unseals.
+   ========================================================================= */
+
+.intake {
+  --rc-bg: #0a0a0f;
+  --rc-surface: #14141c;
+  --rc-raised: #1a1a24;
+  --rc-border: #2a2a38;
+  --rc-cyan: #3ba9e8;
+  --rc-violet: #7a5cff;
+  --rc-ink: #ededf2;
+  --rc-dim: #9a9aab;
+  --rc-danger: #e85c5c;
+  --rc-wax: #d9a154; /* inspection notes */
+  --rc-serif: "Fraunces", Georgia, serif;
+  --rc-mono: "Share Tech Mono", ui-monospace, monospace;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100vh;
+  overflow: hidden;
+  background: radial-gradient(ellipse 70% 40% at 50% -5%, rgba(122, 92, 255, 0.09), transparent 70%),
+    var(--rc-bg);
+}
+
+/* The door you're standing before: a hair-thin seam of light down the
+   center, echoed later by the ledger seam and the door-flash. */
+.intake::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 54px;
+  bottom: 0;
+  width: 1px;
+  background: linear-gradient(
+    180deg,
+    transparent,
+    rgba(59, 169, 232, 0.11) 30%,
+    rgba(122, 92, 255, 0.09) 70%,
+    transparent
+  );
+  pointer-events: none;
+}
+
+.intake :focus-visible {
+  outline: 2px solid var(--rc-cyan);
+  outline-offset: 2px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+/* ---- Masthead ---------------------------------------------------------- */
+
+.intake-masthead {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 22px 24px 0;
+}
+
+.masthead-mark {
+  font-family: var(--rc-mono);
+  font-size: 13px;
+  letter-spacing: 0.32em;
+  color: var(--rc-ink);
+}
+
+.masthead-duty {
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--rc-dim);
+}
+
+/* ---- Column ------------------------------------------------------------ */
+
+.intake-column {
+  width: 100%;
+  max-width: 640px;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 0 24px 22px;
+}
+
+.chat-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--rc-border) transparent;
+  /* Messages dissolve as they leave, instead of clipping at the masthead. */
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30px);
+  mask-image: linear-gradient(180deg, transparent 0, #000 30px);
+}
+
+.chat-messages {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  padding: 28px 2px 18px;
+}
+
+/* Anchor the conversation to the composer, chat-style. */
+.chat-messages > :first-child {
+  margin-top: auto;
+}
+
+.msg {
+  animation: msg-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes msg-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* The Gamemaster: open narration, no bubble. */
+.msg-guide {
+  display: flex;
+  gap: 12px;
+  max-width: 88%;
+}
+
+.guide-glyph {
+  color: var(--rc-cyan);
+  font-size: 11px;
+  line-height: 2.4;
+  flex-shrink: 0;
+}
+
+.msg-guide--failed .guide-glyph {
+  color: var(--rc-danger);
+}
+
+.guide-body {
+  min-width: 0;
+}
+
+.msg-guide p {
+  font-family: var(--rc-serif);
+  font-style: italic;
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--rc-ink);
+  letter-spacing: 0.01em;
+}
+
+.msg-guide--failed p {
+  color: color-mix(in srgb, var(--rc-danger) 75%, var(--rc-ink));
+}
+
+/* You: a sealed note. */
+.msg-user {
+  align-self: flex-end;
+  max-width: 78%;
+  background: rgba(122, 92, 255, 0.13);
+  border: 1px solid rgba(122, 92, 255, 0.38);
+  border-radius: 12px 12px 3px 12px;
+  padding: 10px 14px;
+}
+
+.msg-user p {
+  font-size: 15.5px;
+  line-height: 1.5;
+  color: var(--rc-ink);
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* ---- Difficulty seals --------------------------------------------------- */
+
+.seal-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.seal {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+  padding: 11px 12px 12px;
+  background: color-mix(in srgb, var(--rc-surface) 80%, transparent);
+  border: 1px solid var(--rc-border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.seal:hover:not(:disabled) {
+  border-color: var(--rc-cyan);
+  transform: translateY(-1px);
+}
+
+.seal:disabled {
+  cursor: default;
+  opacity: 0.38;
+}
+
+.seal.is-picked {
+  opacity: 1;
+  border-color: var(--rc-cyan);
+  background: rgba(59, 169, 232, 0.09);
+}
+
+.seal-head {
+  font-family: var(--rc-mono);
+  font-size: 13px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--rc-ink);
+}
+
+.seal-head b {
+  color: var(--rc-cyan);
+  font-weight: 400;
+  margin-right: 7px;
+  letter-spacing: 0.14em;
+}
+
+.seal-blurb {
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--rc-dim);
+}
+
+.retry-row {
+  display: flex;
+}
+
+.seal--retry {
+  max-width: 300px;
+}
+
+.seal--retry .seal-head b {
+  letter-spacing: 0;
+}
+
+/* ---- Composer ------------------------------------------------------------ */
+
+.composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  background: var(--rc-raised);
+  border: 1px solid var(--rc-border);
+  border-radius: 12px;
+  padding: 10px 10px 10px 16px;
+  transition: border-color 0.16s ease, opacity 0.2s ease;
+}
+
+.composer:focus-within {
+  border-color: var(--rc-violet);
+}
+
+.composer textarea {
+  flex: 1;
+  background: none;
+  border: none;
+  resize: none;
+  color: var(--rc-ink);
+  font-family: inherit;
+  font-size: 15.5px;
+  line-height: 1.5;
+  padding: 4px 0;
+  max-height: 140px;
+}
+
+.composer textarea:focus {
+  outline: none;
+}
+
+.composer textarea::placeholder {
+  color: var(--rc-dim);
+}
+
+.composer textarea:disabled {
+  color: var(--rc-dim);
+}
+
+.composer-send {
+  font-family: var(--rc-mono);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #06131c;
+  background: var(--rc-cyan);
+  border: none;
+  border-radius: 8px;
+  padding: 9px 16px;
+  cursor: pointer;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.composer-send:hover:not(:disabled) {
+  background: #2a7bab;
+}
+
+.composer-send:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+.composer-hint {
+  font-family: var(--rc-mono);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  color: var(--rc-dim);
+  opacity: 0.7;
+  padding: 7px 4px 0;
+}
+
+/* ---- Build ledger (the signature) ---------------------------------------- */
+
+.ledger {
+  position: relative;
+  margin-top: 14px;
+  background: color-mix(in srgb, var(--rc-surface) 82%, transparent);
+  border: 1px solid var(--rc-border);
+  border-radius: 10px;
+  padding: 13px 16px 14px 24px;
+  max-height: 38vh;
+  overflow-y: auto;
+  animation: msg-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* The seam: a track down the left edge that fills as the door unseals. */
+.ledger-seam {
+  position: absolute;
+  left: 9px;
+  top: 13px;
+  bottom: 14px;
+  width: 2px;
+  background: var(--rc-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ledger-seam i {
+  display: block;
+  width: 100%;
+  background: linear-gradient(180deg, var(--rc-cyan), var(--rc-violet));
+  transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.ledger-head {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--rc-dim);
+  margin-bottom: 10px;
+}
+
+.ledger-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.ledger-line {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  font-family: var(--rc-mono);
+  font-size: 13.5px;
+  letter-spacing: 0.03em;
+  color: var(--rc-dim);
+  transition: color 0.25s ease, opacity 0.25s ease;
+}
+
+.ledger-line.is-pending {
+  opacity: 0.45;
+}
+
+.ledger-line.is-active {
+  color: var(--rc-ink);
+}
+
+.ledger-line.is-done {
+  opacity: 0.85;
+}
+
+.ledger-glyph {
+  width: 15px;
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--rc-cyan);
+}
+
+.ledger-line.is-pending .ledger-glyph {
+  color: var(--rc-dim);
+}
+
+.ledger-line.is-active .ledger-glyph {
+  display: inline-block;
+  animation: glyph-turn 1.5s linear infinite;
+}
+
+@keyframes glyph-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ledger-note {
+  font-family: var(--rc-mono);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--rc-wax);
+  margin-top: 9px;
+  padding-left: 25px;
+  text-indent: -25px;
+}
+
+.ledger-note::before {
+  content: "▲ ";
+  letter-spacing: 0.25em;
+}
+
+.ledger-door {
+  font-family: var(--rc-serif);
+  font-style: italic;
+  font-size: 15.5px;
+  color: var(--rc-ink);
+  margin-top: 11px;
+}
+
+.ledger-halt {
+  font-family: var(--rc-mono);
+  font-size: 12px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--rc-danger);
+  margin-top: 11px;
+}
+
+/* ---- Door flash (ready -> room) ------------------------------------------ */
+
+.door-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.door-flash::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: linear-gradient(180deg, var(--rc-cyan), var(--rc-violet));
+  animation: door-open 1.1s ease-in 0.45s both;
+}
+
+@keyframes door-open {
+  0% {
+    opacity: 0;
+    transform: scaleX(1);
+  }
+  25% {
+    opacity: 0.85;
+    transform: scaleX(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(700);
+  }
+}
+
+/* ---- Small screens -------------------------------------------------------- */
+
+@media (max-width: 560px) {
+  .seal-row {
+    grid-template-columns: 1fr;
+  }
+
+  .msg-guide {
+    max-width: 100%;
+  }
+
+  .msg-guide p {
+    font-size: 16.5px;
+  }
+}
+
+/* ---- Reduced motion -------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .msg,
+  .ledger {
+    animation: none !important;
+  }
+
+  .ledger-line.is-active .ledger-glyph {
+    animation: none !important;
+  }
+
+  .ledger-seam i {
+    transition: none;
+  }
+
+  .door-flash {
+    display: none;
+  }
+
+  .seal:hover:not(:disabled) {
+    transform: none;
+  }
+}

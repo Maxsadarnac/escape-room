@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { generateRoom } from "./api";
+import { useEffect, useRef, useState } from "react";
+import { generateRoomStream } from "./api";
 import IntakeScreen from "./components/IntakeScreen";
 import RoomScreen from "./components/RoomScreen";
 import CompletionScreen from "./components/CompletionScreen";
@@ -10,9 +10,13 @@ function App() {
   const [room, setRoom] = useState(null);
   const [solved, setSolved] = useState(new Set());
   const [hintsRevealed, setHintsRevealed] = useState({});
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const [lastRequest, setLastRequest] = useState(null);
+
+  // Generation stream state, consumed by the intake screen's build ledger.
+  const [feed, setFeed] = useState([]);
+  const [genState, setGenState] = useState("idle"); // idle | building | ready | failed
+  const [genError, setGenError] = useState(null);
+  const revealTimer = useRef(null);
 
   useEffect(() => {
     if (screen === "room" && room && solved.size === room.puzzles.length) {
@@ -43,20 +47,28 @@ function App() {
       .catch(() => {});
   }, []);
 
+  useEffect(() => () => clearTimeout(revealTimer.current), []);
+
   const runGenerate = async (theme, difficulty) => {
-    setLoading(true);
-    setError(null);
+    setGenState("building");
+    setGenError(null);
+    setFeed([]);
     setLastRequest({ theme, difficulty });
     try {
-      const data = await generateRoom(theme, difficulty);
+      const data = await generateRoomStream(theme, difficulty, (event) => {
+        setFeed((prev) => [...prev, event]);
+      });
       setRoom(data);
       setSolved(new Set());
       setHintsRevealed({});
-      setScreen("room");
+      setGenState("ready");
+      // Hold on the intake a beat so "The door is open." lands before the
+      // room takes over.
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      revealTimer.current = setTimeout(() => setScreen("room"), reduced ? 500 : 1700);
     } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+      setGenError(err.message);
+      setGenState("failed");
     }
   };
 
@@ -91,7 +103,9 @@ function App() {
     setRoom(null);
     setSolved(new Set());
     setHintsRevealed({});
-    setError(null);
+    setFeed([]);
+    setGenState("idle");
+    setGenError(null);
     setScreen("intake");
   };
 
@@ -114,9 +128,10 @@ function App() {
   return (
     <IntakeScreen
       onGenerate={handleGenerate}
-      loading={loading}
-      error={error}
       onRetry={handleRetry}
+      feed={feed}
+      genState={genState}
+      genError={genError}
     />
   );
 }
