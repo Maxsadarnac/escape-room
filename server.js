@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const Anthropic = require("@anthropic-ai/sdk");
+const { buildMockRoom } = require("./mockRoom");
 
 const app = express();
 app.use(cors());
@@ -103,68 +104,201 @@ function buildSystemPrompt(difficulty) {
   return `${SYSTEM_PROMPT}\n\n${DIFFICULTY_CONFIG[difficulty].promptBlock}`;
 }
 
-app.post("/generate-room", generateRoomLimiter, async (req, res) => {
-  const { theme, difficulty } = req.body || {};
+/* ---- Generation pipeline -------------------------------------------------
+   One pipeline serves both endpoints. It reports progress through onEvent
+   with events that mirror what is genuinely happening:
 
-  if (typeof theme !== "string" || theme.trim().length === 0) {
-    return res.status(400).json({ error: "theme is required and must be a non-empty string" });
+     { type: "stage", stage: "brief" }    request accepted, prompt assembled
+     { type: "stage", stage: "story" }    model output reached "story"
+     { type: "stage", stage: "scene" }    model output reached "scene"
+     { type: "stage", stage: "puzzles" }  model output reached "puzzles"
+     { type: "stage", stage: "check" }    consistency checks running
+     { type: "retry", attempt, max, category, reason }
+                                          a draft failed checks; regenerating
+     { type: "stage", stage: "build" }    cipher encoding + family assignment
+
+   The story/scene/puzzles stages come from watching the token stream for the
+   top-level keys in schema order — real progress, not a timer. */
+
+const MOCK_GENERATION = process.env.MOCK_GENERATION === "1";
+
+class PipelineError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
   }
+}
 
-  console.log(`[generate-room] theme="${theme.trim()}" at ${new Date().toISOString()}`);
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const resolvedDifficulty = ["easy", "medium", "hard"].includes(difficulty)
-    ? difficulty
-    : "medium";
+const STAGE_MARKERS = [
+  { stage: "story", marker: /"story"\s*:/ },
+  { stage: "scene", marker: /"scene"\s*:/ },
+  { stage: "puzzles", marker: /"puzzles"\s*:/ },
+];
 
-  const MAX_ATTEMPTS = DIFFICULTY_CONFIG[resolvedDifficulty].maxAttempts;
-  const systemPrompt = buildSystemPrompt(resolvedDifficulty);
+async function streamModelResponse({ systemPrompt, theme, difficulty, maxTokens, onEvent, signal }) {
+  const stream = anthropic.messages.stream(
+    {
+      model: "claude-haiku-4-5",
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [
+        {
+          role: "user",
+          content: `Generate an escape room for theme: "${theme}", difficulty: "${difficulty}".`,
+        },
+      ],
+    },
+    { signal }
+  );
 
-  try {
-    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-      const response = await anthropic.messages.create({
-        model: "claude-haiku-4-5",
-        max_tokens: DIFFICULTY_CONFIG[resolvedDifficulty].maxTokens,
-        system: systemPrompt,
-        messages: [
-          {
-            role: "user",
-            content: `Generate an escape room for theme: "${theme.trim()}", difficulty: "${resolvedDifficulty}".`,
-          },
-        ],
-      });
+  let text = "";
+  let nextMarker = 0;
+  stream.on("text", (delta) => {
+    text += delta;
+    while (nextMarker < STAGE_MARKERS.length && STAGE_MARKERS[nextMarker].marker.test(text)) {
+      onEvent({ type: "stage", stage: STAGE_MARKERS[nextMarker].stage });
+      nextMarker++;
+    }
+  });
+  await stream.finalMessage();
+  return text;
+}
 
-      const textBlock = response.content.find((block) => block.type === "text");
-      if (!textBlock) {
-        return res.status(502).json({ error: "Model returned no text content" });
+/** Replays the mock fixture through the same stage beats the model path
+    emits, with human-scale pacing. The result still runs the real
+    validators, cipher encoding, and family normalization. */
+async function mockModelResponse({ theme, difficulty, onEvent, signal }) {
+  for (const [stage, delay] of [["story", 900], ["scene", 1000], ["puzzles", 1200]]) {
+    await sleep(delay);
+    if (signal?.aborted) throw new PipelineError(499, "client disconnected");
+    onEvent({ type: "stage", stage });
+  }
+  await sleep(800);
+  return JSON.stringify(buildMockRoom(theme, difficulty));
+}
+
+async function runGenerationPipeline({ theme, difficulty, onEvent, signal }) {
+  const config = DIFFICULTY_CONFIG[difficulty];
+  const systemPrompt = buildSystemPrompt(difficulty);
+  onEvent({ type: "stage", stage: "brief" });
+
+  for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
+    const rawText = MOCK_GENERATION
+      ? await mockModelResponse({ theme, difficulty, onEvent, signal })
+      : await streamModelResponse({
+          systemPrompt,
+          theme,
+          difficulty,
+          maxTokens: config.maxTokens,
+          onEvent,
+          signal,
+        });
+
+    onEvent({ type: "stage", stage: "check" });
+
+    const room = parseRoomJson(rawText);
+    const failureReason = room
+      ? getValidationFailureReason(room)
+      : "SCHEMA: model did not return valid JSON";
+    if (failureReason) {
+      const category = failureReason.startsWith("SCHEMA:") ? "SCHEMA" : "QUALITY";
+      const reason = failureReason.replace(/^SCHEMA:\s*/, "");
+      console.log(
+        `[generate-room] attempt ${attempt}/${config.maxAttempts} discarded — ${category}: ${reason}`
+      );
+      if (attempt < config.maxAttempts) {
+        onEvent({ type: "retry", attempt, max: config.maxAttempts, category, reason });
       }
-
-      const room = parseRoomJson(textBlock.text);
-      if (!room) {
-        console.log(
-          `[generate-room] attempt ${attempt}/${MAX_ATTEMPTS} discarded — SCHEMA: model did not return valid JSON`
-        );
-        continue;
-      }
-
-      const failureReason = getValidationFailureReason(room);
-      if (failureReason) {
-        const category = failureReason.startsWith("SCHEMA:") ? "SCHEMA" : "QUALITY";
-        console.log(
-          `[generate-room] attempt ${attempt}/${MAX_ATTEMPTS} discarded — ${category}: ${failureReason.replace(/^SCHEMA:\s*/, "")}`
-        );
-        continue;
-      }
-
-      applyCipherEncoding(room, DIFFICULTY_CONFIG[resolvedDifficulty].cipherShiftRange);
-      normalizeVisualFamily(room);
-      return res.status(200).json(room);
+      continue;
     }
 
-    return res.status(500).json({
-      error: "Failed to generate a valid room after retries — puzzles kept failing consistency checks",
-    });
+    onEvent({ type: "stage", stage: "build" });
+    applyCipherEncoding(room, config.cipherShiftRange);
+    normalizeVisualFamily(room);
+    return room;
+  }
+
+  throw new PipelineError(
+    500,
+    "Failed to generate a valid room after retries — puzzles kept failing consistency checks"
+  );
+}
+
+function validateGenerateParams(body) {
+  const { theme, difficulty } = body || {};
+  if (typeof theme !== "string" || theme.trim().length === 0) {
+    return { error: "theme is required and must be a non-empty string" };
+  }
+  return {
+    theme: theme.trim(),
+    difficulty: ["easy", "medium", "hard"].includes(difficulty) ? difficulty : "medium",
+  };
+}
+
+app.post("/generate-room", generateRoomLimiter, async (req, res) => {
+  const params = validateGenerateParams(req.body);
+  if (params.error) return res.status(400).json({ error: params.error });
+
+  console.log(`[generate-room] theme="${params.theme}" at ${new Date().toISOString()}`);
+
+  try {
+    const room = await runGenerationPipeline({ ...params, onEvent: () => {} });
+    return res.status(200).json(room);
   } catch (err) {
+    if (err instanceof PipelineError) return res.status(err.status).json({ error: err.message });
     return handleAnthropicError(err, res);
+  }
+});
+
+/**
+ * Streaming variant: NDJSON progress events (one JSON object per line)
+ * followed by { type: "room", room } on success or { type: "error", ... }.
+ * The response is always HTTP 200 once streaming begins; outcomes travel
+ * in-band. Client disconnect aborts the model stream.
+ */
+app.post("/generate-room/stream", generateRoomLimiter, async (req, res) => {
+  const params = validateGenerateParams(req.body);
+  if (params.error) return res.status(400).json({ error: params.error });
+
+  console.log(`[generate-room/stream] theme="${params.theme}" at ${new Date().toISOString()}`);
+
+  res.status(200).set({
+    "Content-Type": "application/x-ndjson; charset=utf-8",
+    "Cache-Control": "no-cache, no-transform",
+  });
+  res.flushHeaders();
+
+  const send = (event) => {
+    if (!res.writableEnded) res.write(`${JSON.stringify(event)}\n`);
+  };
+  // res "close" (not req) is the reliable disconnect signal once the request
+  // body has been fully read; it also fires after a normal end, so guard.
+  const aborter = new AbortController();
+  res.on("close", () => {
+    if (!res.writableEnded) aborter.abort();
+  });
+  const heartbeat = setInterval(() => send({ type: "ping" }), 10000);
+
+  try {
+    const room = await runGenerationPipeline({
+      ...params,
+      onEvent: send,
+      signal: aborter.signal,
+    });
+    send({ type: "room", room });
+  } catch (err) {
+    if (aborter.signal.aborted) {
+      console.log("[generate-room/stream] client disconnected — generation aborted");
+    } else if (err instanceof PipelineError) {
+      send({ type: "error", error: err.message, status: err.status });
+    } else {
+      send({ type: "error", ...mapAnthropicError(err) });
+    }
+  } finally {
+    clearInterval(heartbeat);
+    res.end();
   }
 });
 
@@ -675,25 +809,35 @@ function parseRoomJson(rawText) {
   }
 }
 
-function handleAnthropicError(err, res) {
+function mapAnthropicError(err) {
   if (err instanceof Anthropic.RateLimitError) {
-    return res.status(429).json({ error: "Rate limited by Anthropic API", retryable: true });
+    return { status: 429, error: "Rate limited by Anthropic API", retryable: true };
   }
   if (err instanceof Anthropic.AuthenticationError) {
-    return res.status(500).json({ error: "Anthropic authentication failed — check ANTHROPIC_API_KEY" });
+    return { status: 500, error: "Anthropic authentication failed — check ANTHROPIC_API_KEY" };
   }
   if (err instanceof Anthropic.APIConnectionError) {
-    return res.status(502).json({ error: "Could not reach Anthropic API", retryable: true });
+    return { status: 502, error: "Could not reach Anthropic API", retryable: true };
   }
   if (err instanceof Anthropic.APIStatusError) {
-    return res.status(err.status >= 500 ? 502 : 400).json({ error: err.message });
+    return { status: err.status >= 500 ? 502 : 400, error: err.message };
   }
 
   console.error("Unexpected error generating room:", err);
-  return res.status(500).json({ error: "Unexpected server error" });
+  return { status: 500, error: "Unexpected server error" };
+}
+
+function handleAnthropicError(err, res) {
+  const mapped = mapAnthropicError(err);
+  const body = { error: mapped.error };
+  if (mapped.retryable) body.retryable = true;
+  return res.status(mapped.status).json(body);
 }
 
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`escape-room-backend listening on port ${PORT}`);
+  if (MOCK_GENERATION) {
+    console.log("⚠ MOCK_GENERATION=1 — serving the offline fixture, no Anthropic calls");
+  }
 });
