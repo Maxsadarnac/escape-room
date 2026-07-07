@@ -166,6 +166,24 @@ export default function IntakeScreen({ onGenerate, onRetry, feed, genState, genE
     failed: "Adjust the idea, or run it again…",
   }[phase];
 
+  // The door above the conversation: idle seam -> light rising with real
+  // build progress -> leaves parting. Status the ledger announces (aria-live)
+  // is mirrored here visually, so the whole block stays aria-hidden.
+  const doorState =
+    genState === "ready"
+      ? "open"
+      : genState === "failed"
+        ? "halted"
+        : genState === "building"
+          ? "building"
+          : "idle";
+  const plaque = {
+    idle: "nothing behind this door — yet",
+    building: "work in progress",
+    open: "open",
+    halted: "build halted",
+  }[doorState];
+
   return (
     <div className="intake">
       {genState === "ready" && <div className="door-flash" aria-hidden="true" />}
@@ -177,6 +195,25 @@ export default function IntakeScreen({ onGenerate, onRetry, feed, genState, genE
       <h1 className="sr-only">Roomcraft — describe your escape room</h1>
 
       <div className="intake-column">
+        <div
+          className={`threshold threshold--${doorState}`}
+          style={{ "--door-progress": ledger.progress }}
+          aria-hidden="true"
+        >
+          <div className="door">
+            <div className="door-lintel">
+              <span className="door-keystone">◆</span>
+            </div>
+            <div className="door-leaves">
+              <i className="door-leaf" />
+              <i className="door-seam" />
+              <i className="door-leaf" />
+            </div>
+          </div>
+          <div className="door-spill" />
+          <p className="door-plaque">{plaque}</p>
+        </div>
+
         <div className="chat-scroll" ref={scrollRef}>
           <div className="chat-messages" aria-live="polite">
             {messages.map((m) =>
