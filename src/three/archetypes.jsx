@@ -383,6 +383,233 @@ function Pedestal() {
   );
 }
 
+/* ---- Vignettes ------------------------------------------------------------
+   Floor props don't stand alone in a showroom: each gets a ground pad and
+   one or two family-appropriate companion pieces beside/behind it, so the
+   room reads as furnished scenes instead of exhibits. Positions live in the
+   prop's local space (they turn with it); everything is deterministic from
+   the prop seed.                                                            */
+
+const frac = (v) => v - Math.floor(v);
+
+function Companion({ family, variant, tokens }) {
+  const dark = new THREE.Color(tokens.border).multiplyScalar(0.85);
+  const darker = new THREE.Color(tokens.border).multiplyScalar(0.55);
+  switch (family) {
+    case "fantasy":
+      return variant ? (
+        <group>
+          {/* barrel */}
+          <mesh castShadow position={[0, 0.28, 0]}>
+            <cylinderGeometry args={[0.24, 0.21, 0.56, 10]} />
+            <meshStandardMaterial color={dark} roughness={0.95} />
+          </mesh>
+          <mesh position={[0, 0.4, 0]} rotation={[Math.PI / 2, 0, 0]}>
+            <torusGeometry args={[0.235, 0.02, 6, 16]} />
+            <meshStandardMaterial color={darker} roughness={0.7} metalness={0.3} />
+          </mesh>
+        </group>
+      ) : (
+        <group>
+          {/* stacked tomes */}
+          <mesh castShadow position={[0, 0.045, 0]}>
+            <boxGeometry args={[0.42, 0.09, 0.3]} />
+            <meshStandardMaterial color={dark} roughness={0.95} />
+          </mesh>
+          <mesh castShadow position={[0.04, 0.13, -0.02]} rotation={[0, 0.4, 0]}>
+            <boxGeometry args={[0.36, 0.08, 0.26]} />
+            <meshStandardMaterial color={darker} roughness={0.95} />
+          </mesh>
+        </group>
+      );
+    case "horror-gothic":
+      return variant ? (
+        <mesh castShadow position={[0, 0.24, 0]} rotation={[0.06, 0.7, -0.05]}>
+          <boxGeometry args={[0.5, 0.48, 0.44]} />
+          <meshStandardMaterial color={darker} roughness={0.98} />
+        </mesh>
+      ) : (
+        <group>
+          {/* candle stub on the floor */}
+          <mesh position={[0, 0.09, 0]}>
+            <cylinderGeometry args={[0.04, 0.05, 0.18, 8]} />
+            <meshStandardMaterial color="#c9bda6" roughness={0.95} />
+          </mesh>
+          <mesh position={[0, 0.21, 0]}>
+            <sphereGeometry args={[0.028, 8, 6]} />
+            <meshStandardMaterial
+              color="#080808"
+              emissive="#e8a04c"
+              emissiveIntensity={2.2}
+              roughness={0.5}
+            />
+          </mesh>
+        </group>
+      );
+    case "noir-mystery":
+      return variant ? (
+        <group>
+          {/* case-file boxes */}
+          <mesh castShadow position={[0, 0.14, 0]}>
+            <boxGeometry args={[0.46, 0.28, 0.34]} />
+            <meshStandardMaterial color={dark} roughness={0.9} />
+          </mesh>
+          <mesh castShadow position={[-0.03, 0.36, 0.02]} rotation={[0, -0.3, 0]}>
+            <boxGeometry args={[0.42, 0.16, 0.3]} />
+            <meshStandardMaterial color={darker} roughness={0.9} />
+          </mesh>
+        </group>
+      ) : (
+        <group>
+          {/* wooden chair, back to the room */}
+          <mesh castShadow position={[0, 0.24, 0]}>
+            <boxGeometry args={[0.4, 0.05, 0.4]} />
+            <meshStandardMaterial color={dark} roughness={0.9} />
+          </mesh>
+          {[[-0.16, -0.16], [0.16, -0.16], [-0.16, 0.16], [0.16, 0.16]].map(([x, z], i) => (
+            <mesh key={i} position={[x, 0.11, z]}>
+              <cylinderGeometry args={[0.02, 0.02, 0.22, 6]} />
+              <meshStandardMaterial color={darker} roughness={0.9} />
+            </mesh>
+          ))}
+          <mesh castShadow position={[0, 0.52, -0.18]}>
+            <boxGeometry args={[0.4, 0.55, 0.05]} />
+            <meshStandardMaterial color={dark} roughness={0.9} />
+          </mesh>
+        </group>
+      );
+    case "nature":
+      return variant ? (
+        <mesh castShadow position={[0, 0.16, 0]} scale={[1.3, 0.75, 1.1]} rotation={[0, 0.9, 0]}>
+          <icosahedronGeometry args={[0.3, 0]} />
+          <meshStandardMaterial color={darker} roughness={1} />
+        </mesh>
+      ) : (
+        <group>
+          {/* fern sprouts */}
+          {[[0, 0.35, 0.16], [0.14, 0.42, -0.35], [-0.13, 0.3, 0.5]].map(([x, h, tilt], i) => (
+            <mesh key={i} castShadow position={[x, h / 2, x * 0.5]} rotation={[tilt * 0.4, 0, tilt]}>
+              <coneGeometry args={[0.09, h, 6]} />
+              <meshStandardMaterial
+                color={new THREE.Color(tokens.primary).multiplyScalar(0.3)}
+                roughness={1}
+              />
+            </mesh>
+          ))}
+        </group>
+      );
+    case "cyberpunk":
+      return variant ? (
+        <group>
+          {/* road-case with a live edge */}
+          <mesh castShadow position={[0, 0.26, 0]}>
+            <boxGeometry args={[0.54, 0.52, 0.46]} />
+            <meshStandardMaterial color={darker} roughness={0.55} metalness={0.4} />
+          </mesh>
+          <mesh position={[0, 0.26, 0.235]}>
+            <boxGeometry args={[0.44, 0.03, 0.01]} />
+            <meshStandardMaterial
+              color="#080808"
+              emissive={new THREE.Color(tokens.primary)}
+              emissiveIntensity={1.4}
+              roughness={0.5}
+            />
+          </mesh>
+        </group>
+      ) : (
+        <group>
+          {/* bollard with a warning band */}
+          <mesh castShadow position={[0, 0.3, 0]}>
+            <cylinderGeometry args={[0.09, 0.12, 0.6, 10]} />
+            <meshStandardMaterial color={darker} roughness={0.6} metalness={0.3} />
+          </mesh>
+          <mesh position={[0, 0.46, 0]}>
+            <cylinderGeometry args={[0.095, 0.095, 0.06, 10]} />
+            <meshStandardMaterial
+              color="#080808"
+              emissive={new THREE.Color(tokens.accent)}
+              emissiveIntensity={1.6}
+              roughness={0.5}
+            />
+          </mesh>
+        </group>
+      );
+    default:
+      // sci-fi
+      return variant ? (
+        <group>
+          {/* supply crate */}
+          <mesh castShadow position={[0, 0.25, 0]}>
+            <boxGeometry args={[0.52, 0.5, 0.46]} />
+            <meshStandardMaterial color={dark} roughness={0.5} metalness={0.35} />
+          </mesh>
+          <mesh position={[0, 0.44, 0.232]}>
+            <boxGeometry args={[0.3, 0.05, 0.01]} />
+            <meshStandardMaterial
+              color="#080808"
+              emissive={new THREE.Color(tokens.primary)}
+              emissiveIntensity={0.9}
+              roughness={0.5}
+            />
+          </mesh>
+        </group>
+      ) : (
+        <group>
+          {/* pressure canister pair */}
+          <mesh castShadow position={[0, 0.29, 0]}>
+            <cylinderGeometry args={[0.14, 0.14, 0.58, 10]} />
+            <meshStandardMaterial color={dark} roughness={0.45} metalness={0.4} />
+          </mesh>
+          <mesh castShadow position={[0.24, 0.21, 0.06]}>
+            <cylinderGeometry args={[0.11, 0.11, 0.42, 10]} />
+            <meshStandardMaterial color={darker} roughness={0.45} metalness={0.4} />
+          </mesh>
+        </group>
+      );
+  }
+}
+
+const clampv = (v, min, max) => Math.min(max, Math.max(min, v));
+
+export function Vignette({ family, prop, tokens }) {
+  const seed = prop.seed;
+  const pad = new THREE.Color(tokens.surface).multiplyScalar(0.66);
+  // Companions sit beside/behind the prop, deterministic from its seed.
+  // Offsets are world-aligned (the caller counter-rotates this group) so
+  // they can be clamped inside the room regardless of prop orientation.
+  const spots = useMemo(() => {
+    const [px, , pz] = prop.position;
+    const count = 1 + (Math.floor(seed * 977) % 2);
+    return Array.from({ length: count }, (_, k) => {
+      const side = k === 0 ? 1 : -1;
+      const a = prop.rotationY + side * Math.PI * (0.56 + 0.45 * frac(seed * 7.3 + k * 2.1));
+      const r = 1.05 + 0.3 * frac(seed * 13.7 + k * 3.3);
+      const wx = clampv(px + Math.sin(a) * r, -7.35, 7.35);
+      const wz = clampv(pz + Math.cos(a) * r, -5.3, 5.3);
+      return {
+        x: wx - px,
+        z: wz - pz,
+        rotY: frac(seed * 29.1 + k) * Math.PI * 2,
+        variant: (Math.floor(seed * 4409) + k) % 2 === 0,
+      };
+    });
+  }, [prop, seed]);
+
+  return (
+    <group>
+      <mesh position={[0, 0.017, 0]} receiveShadow>
+        <cylinderGeometry args={[1.06, 1.12, 0.034, 28]} />
+        <meshStandardMaterial color={pad} roughness={0.95} />
+      </mesh>
+      {spots.map((s, i) => (
+        <group key={i} position={[s.x, 0, s.z]} rotation={[0, s.rotY, 0]}>
+          <Companion family={family} variant={s.variant} tokens={tokens} />
+        </group>
+      ))}
+    </group>
+  );
+}
+
 /* ---- Registry ----------------------------------------------------------- */
 
 const ARCHETYPES = {
@@ -535,8 +762,9 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
     onSelect(prop);
   };
 
-  // Wall-mounted groups originate at hang height; drop the ring to the floor.
-  const ringY = 0.02 - prop.position[1];
+  // Wall-mounted groups originate at hang height; drop the ring to the floor
+  // (just above the vignette pad).
+  const ringY = 0.048 - prop.position[1];
   const ringZ = prop.wallMounted ? 0.95 : 0;
 
   return (
@@ -551,6 +779,12 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
       <group ref={scaleRef}>
         <def.Component seed={prop.seed} />
       </group>
+
+      {!prop.wallMounted && (
+        <group rotation={[0, -prop.rotationY, 0]}>
+          <Vignette family={family} prop={prop} tokens={tokens} />
+        </group>
+      )}
 
       {/* hover ring on the floor (also the solve ripple) */}
       <mesh ref={ringMeshRef} position={[0, ringY, ringZ]} rotation={[-Math.PI / 2, 0, 0]}>

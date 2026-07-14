@@ -139,6 +139,7 @@ function baseStatePalette(tokens, state) {
  */
 export function buildMood(family, tokens, options = {}) {
   const mood = baseMood(family, tokens);
+  mood.post = POST[normalizeFamily(family)];
   const adj = moodAdjust(options.moodText);
 
   if (adj.warmth !== 0) {
@@ -165,6 +166,19 @@ export function buildMood(family, tokens, options = {}) {
   }
   return mood;
 }
+
+/* Per-family post-processing + environment-light dials (see postfx.jsx):
+   bloom — emissive glare; ao — corner/contact occlusion strength;
+   vignette — edge darkening; grain — film-grain opacity (0 disables);
+   env — image-based-light intensity (specular life on metals).            */
+const POST = {
+  "sci-fi": { bloom: 0.75, ao: 2.2, vignette: 0.26, grain: 0, env: 0.32 },
+  fantasy: { bloom: 0.95, ao: 2.6, vignette: 0.3, grain: 0.18, env: 0.14 },
+  "horror-gothic": { bloom: 0.8, ao: 3.2, vignette: 0.46, grain: 0.42, env: 0.07 },
+  "noir-mystery": { bloom: 0.55, ao: 2.8, vignette: 0.44, grain: 0.45, env: 0.14 },
+  nature: { bloom: 0.85, ao: 2.6, vignette: 0.28, grain: 0, env: 0.16 },
+  cyberpunk: { bloom: 1.2, ao: 2.4, vignette: 0.34, grain: 0.22, env: 0.38 },
+};
 
 function baseMood(family, tokens) {
   const fam = normalizeFamily(family);
@@ -233,17 +247,19 @@ function baseMood(family, tokens) {
       return {
         shell,
         fog: { color: col("#0d0705"), near: 5.5, far: 23 },
-        ambient: { color: lighten(tokens.surface, 0.2), start: 0.19, end: 0.38 },
+        // The textured plaster/plank albedo eats more light than the old
+        // flat fills — the rig runs hotter here to stay readable.
+        ambient: { color: lighten(tokens.surface, 0.2), start: 0.38, end: 0.58 },
         key: {
           position: [0, 3.8, 1.5],
           colorStart: col("#b05a28"), // candle warmth from the CSS glow layer
           colorEnd: col("#d08a4a"),
-          start: 1.8,
-          end: 2.5,
+          start: 2.2,
+          end: 3.0,
           shadows: true,
         },
         accents: [
-          { position: [-6.5, 1.4, -4.5], color: col(tokens.primary), start: 1.2, end: 0.6, distance: 12, pulse: 0.3 },
+          { position: [-6.5, 1.4, -4.5], color: col(tokens.primary), start: 1.6, end: 0.8, distance: 12, pulse: 0.3 },
           { position: [6.5, 1.4, 4.5], color: col(tokens.accent), start: 0.5, end: 1.6, distance: 12 },
         ],
         flicker: 0.55,
@@ -265,8 +281,10 @@ function baseMood(family, tokens) {
           position: [-6.5, 3.6, -2],
           colorStart: col("#f2ead6"),
           colorEnd: col("#f6f0dd"),
-          start: 2.6,
-          end: 3.0,
+          // Down from 2.6/3.0 — the parquet's sheen + bloom blew out the
+          // window light pool at the old energy.
+          start: 1.9,
+          end: 2.3,
           shadows: true,
         },
         accents: [
@@ -289,7 +307,7 @@ function baseMood(family, tokens) {
       return {
         shell,
         fog: { color: darken(tokens.surface, 0.3), near: 10, far: 28 },
-        ambient: { color: desaturate(tokens.primary, 0.5, 0.8), start: 0.2, end: 0.44 },
+        ambient: { color: desaturate(tokens.primary, 0.5, 0.8), start: 0.26, end: 0.48 },
         key: {
           position: [5, 4.4, -2],
           colorStart: col(tokens.accent),

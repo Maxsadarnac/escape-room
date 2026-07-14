@@ -21,6 +21,16 @@ export const ROOM = {
   halfD: 6,
 };
 
+// The exit door set-piece: a real opening in the -z wall. The first
+// door-classified scene object is bound to it (clickable if it carries a
+// puzzle); other wall props keep clear of its span.
+export const EXIT = {
+  width: 3.6, // opening width
+  height: 3.9, // opening height
+  recess: 1.15, // corridor depth behind the leaves
+  keepout: 3.4, // wall props stay at least this far (center-to-center) off x=0
+};
+
 // Interior band floor props may occupy (keeps clearance from walls).
 const FLOOR_X = 5.6;
 const FLOOR_Z = 4.2;
@@ -171,6 +181,12 @@ export function layoutScene(room) {
     if (!e.rawPosition) e.rawPosition = ringPosition(i);
   });
 
+  // The first door becomes the room's exit — the monumental set-piece on
+  // the -z wall. Interactive doors stay clickable there; a decor door just
+  // gives the room its goal.
+  const exitEntry = entries.find((e) => e.archetype === "door");
+  if (exitEntry) exitEntry.exitDoor = true;
+
   // Normalize hint coordinates into the interior band, preserving the
   // relative arrangement. Degenerate spans (all objects on a line/point)
   // fall back to ring placement on that axis.
@@ -189,8 +205,14 @@ export function layoutScene(room) {
     });
   }
 
-  placeWallProps(entries.filter((e) => e.wallMounted));
-  placeFloorProps(entries.filter((e) => !e.wallMounted));
+  placeWallProps(entries.filter((e) => e.wallMounted && !e.exitDoor));
+  placeFloorProps(entries.filter((e) => !e.wallMounted && !e.exitDoor));
+  for (const e of entries) {
+    if (e.exitDoor) {
+      e.position = [0, 0, -ROOM.halfD];
+      e.rotationY = 0;
+    }
+  }
 
   return entries.map(({ rawPosition: _raw, ...rest }) => rest);
 }
@@ -229,14 +251,34 @@ function placeWallProps(props) {
     const slides = group.map((p) =>
       clamp(p.position[slideIdx], -wall.slideLimit, wall.slideLimit)
     );
-    for (let i = 1; i < slides.length; i++) {
-      if (slides[i] < slides[i - 1] + WALL_SLIDE_GAP) slides[i] = slides[i - 1] + WALL_SLIDE_GAP;
-    }
-    // If the row overflowed the wall, recenter it.
-    const overflow = slides[slides.length - 1] - wall.slideLimit;
-    if (overflow > 0) {
-      const shift = Math.min(overflow, slides[0] + wall.slideLimit);
-      for (let i = 0; i < slides.length; i++) slides[i] -= shift;
+    if (wall.id === "-z") {
+      // The exit door owns the center of this wall: pack each side outward
+      // from its keepout edge instead of the generic gap pass.
+      let cursor = -EXIT.keepout;
+      for (let i = slides.length - 1; i >= 0; i--) {
+        if (slides[i] >= 0) continue;
+        slides[i] = Math.min(slides[i], cursor);
+        cursor = slides[i] - WALL_SLIDE_GAP;
+      }
+      cursor = EXIT.keepout;
+      for (let i = 0; i < slides.length; i++) {
+        if (slides[i] < 0) continue;
+        slides[i] = Math.max(slides[i], cursor);
+        cursor = slides[i] + WALL_SLIDE_GAP;
+      }
+      for (let i = 0; i < slides.length; i++) {
+        slides[i] = clamp(slides[i], -wall.slideLimit, wall.slideLimit);
+      }
+    } else {
+      for (let i = 1; i < slides.length; i++) {
+        if (slides[i] < slides[i - 1] + WALL_SLIDE_GAP) slides[i] = slides[i - 1] + WALL_SLIDE_GAP;
+      }
+      // If the row overflowed the wall, recenter it.
+      const overflow = slides[slides.length - 1] - wall.slideLimit;
+      if (overflow > 0) {
+        const shift = Math.min(overflow, slides[0] + wall.slideLimit);
+        for (let i = 0; i < slides.length; i++) slides[i] -= shift;
+      }
     }
 
     group.forEach((prop, i) => {

@@ -1,44 +1,45 @@
 /* =========================================================================
-   Intake — "The Gamemaster's Threshold"
+   Intake — "Roomcraft Landing"
 
-   Roomcraft brand only (dark / cyan / violet): this screen never wears one
-   of the six room families. Two voices carry the design:
-     · the Gamemaster narrates in Fraunces italic (no bubbles — he speaks
-       into the room)
-     · the machinery (wordmark, seals, build ledger) answers in Share Tech
-       Mono
-   Your own words sit between them in the system hand, as sealed notes.
-   The one loud element is the build ledger: real pipeline stages with a
-   cyan→violet seam that fills as the door unseals.
+   Studio-brand console: candlelit dark, gold accent, Marcellus display serif
+   + Fragment Mono machinery type. Ported from the Claude Design mock
+   (Roomcraft Landing.dc.html) into real CSS classes. Three atmosphere
+   layers behind everything (grid, glow, vignette) give it depth without
+   costing a single extra draw call — the room itself is still the real
+   showpiece.
    ========================================================================= */
 
-.intake {
-  --rc-bg: #0a0a0f;
-  --rc-surface: #14141c;
-  --rc-raised: #1a1a24;
-  --rc-border: #2a2a38;
-  --rc-cyan: #3ba9e8;
-  --rc-violet: #7a5cff;
-  --rc-ink: #ededf2;
-  --rc-dim: #9a9aab;
-  --rc-danger: #e85c5c;
-  --rc-wax: #d9a154; /* inspection notes */
-  --rc-serif: "Fraunces", Georgia, serif;
-  --rc-mono: "Share Tech Mono", ui-monospace, monospace;
+.rc-landing {
+  --rc-bg: #0c110f;
+  --rc-ink: #f0ead9;
+  --rc-ink-dim: rgba(232, 226, 212, 0.55);
+  --rc-ink-faint: rgba(232, 226, 212, 0.35);
+  --rc-line: rgba(232, 226, 212, 0.16);
+  --rc-surface: rgba(19, 26, 23, 0.96);
+  --rc-gold: #c9a227;
+  --rc-gold-hi: #e4c25a;
+  --rc-danger: #c1524b;
+  --rc-serif: "Marcellus", Georgia, serif;
+  --rc-mono: "Fragment Mono", ui-monospace, monospace;
 
   position: relative;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  height: 100vh;
+  background: var(--rc-bg);
+  color: var(--rc-ink);
+  font-family: var(--rc-mono);
   overflow: hidden;
-  background: radial-gradient(ellipse 70% 40% at 50% -5%, rgba(122, 92, 255, 0.09), transparent 70%),
-    var(--rc-bg);
 }
 
-.intake :focus-visible {
-  outline: 2px solid var(--rc-cyan);
+.rc-landing :focus-visible {
+  outline: 2px solid var(--rc-gold);
   outline-offset: 2px;
+}
+
+.rc-landing ::selection {
+  background: rgba(201, 162, 39, 0.35);
+  color: var(--rc-ink);
 }
 
 .sr-only {
@@ -49,684 +50,984 @@
   clip-path: inset(50%);
 }
 
-/* ---- Masthead ---------------------------------------------------------- */
+/* ---- Atmosphere ---------------------------------------------------------- */
 
-.intake-masthead {
-  width: 100%;
-  max-width: 640px;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 22px 24px 0;
-}
-
-.masthead-mark {
-  font-family: var(--rc-mono);
-  font-size: 13px;
-  letter-spacing: 0.32em;
-  color: var(--rc-ink);
-}
-
-.masthead-duty {
-  font-family: var(--rc-mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--rc-dim);
-}
-
-/* ---- Column ------------------------------------------------------------ */
-
-.intake-column {
-  width: 100%;
-  max-width: 640px;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  padding: 0 24px 22px;
-}
-
-/* ---- The threshold door --------------------------------------------------
-   The door owns whatever space the conversation doesn't need: grand while
-   the exchange is short, receding toward a lintel band as it grows. Its
-   seam carries the same real build progress as the ledger; its leaves part
-   when the room is ready. This is the thing you're talking to the
-   Gamemaster across. */
-
-.threshold {
-  flex: 5 0 clamp(96px, 22vh, 176px);
-  max-height: 62vh;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 16px;
-}
-
-.door {
-  width: min(320px, 68%);
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.door-lintel {
-  align-self: center;
-  width: calc(100% + 28px);
-  height: 24px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--rc-raised);
-  border: 1px solid var(--rc-border);
-}
-
-.door-keystone {
-  font-family: var(--rc-mono);
-  font-size: 10px;
-  color: var(--rc-cyan);
-}
-
-.door-leaves {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  border: 1px solid var(--rc-border);
-  border-top: none;
-  overflow: hidden;
-  /* the light behind the door, revealed when the leaves part */
-  background: linear-gradient(180deg, rgba(59, 169, 232, 0.5), rgba(122, 92, 255, 0.42));
-}
-
-.door-leaf {
-  position: relative;
-  flex: 1;
-  background: linear-gradient(180deg, #15151f, #0d0d14);
-  box-shadow: inset 0 0 0 1px rgba(237, 237, 242, 0.03);
-  transition: transform 1.1s cubic-bezier(0.7, 0, 0.3, 1) 0.15s;
-}
-
-/* two recessed panels per leaf, classic door proportions */
-.door-leaf::before,
-.door-leaf::after {
+.rc-landing::before {
   content: "";
   position: absolute;
-  left: 15%;
-  right: 15%;
-  border: 1px solid rgba(237, 237, 242, 0.05);
-  background: rgba(0, 0, 0, 0.25);
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(232, 226, 212, 0.032) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(232, 226, 212, 0.032) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 90% 80% at 50% 40%, black 30%, transparent 100%);
 }
 
-.door-leaf::before {
-  top: 8%;
-  height: 46%;
-}
-
-.door-leaf::after {
-  bottom: 8%;
-  height: 24%;
-}
-
-.door-seam {
-  position: relative;
-  width: 2px;
-  flex-shrink: 0;
-  background: #232331;
-}
-
-.door-seam::after {
+.rc-landing::after {
   content: "";
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: calc(var(--door-progress, 0) * 100%);
-  background: linear-gradient(0deg, var(--rc-violet), var(--rc-cyan));
-  box-shadow: 0 0 14px rgba(59, 169, 232, 0.6);
-  transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 120% 100% at 50% 50%, transparent 55%, rgba(5, 8, 7, 0.7) 100%);
 }
 
-/* Idle: no progress yet, just a hint of what's waiting behind. */
-.threshold--idle .door-seam::after {
-  height: 100%;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(59, 169, 232, 0.3) 45%,
-    rgba(122, 92, 255, 0.24) 75%,
-    transparent
-  );
-  box-shadow: none;
+.rc-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse 60% 45% at 50% 42%, rgba(201, 162, 39, 0.09), transparent 70%);
+  animation: rc-flicker 7s ease-in-out infinite;
 }
 
-.threshold--building .door-seam::after {
-  animation: seam-breathe 2.6s ease-in-out infinite;
-}
-
-@keyframes seam-breathe {
-  50% {
-    opacity: 0.72;
-  }
-}
-
-.threshold--halted .door-seam::after {
-  background: linear-gradient(0deg, var(--rc-danger), var(--rc-wax));
-  box-shadow: 0 0 10px rgba(217, 161, 84, 0.4);
-}
-
-.threshold--open .door-leaf:first-of-type {
-  transform: translateX(-30%);
-}
-
-.threshold--open .door-leaf:last-of-type {
-  transform: translateX(30%);
-}
-
-.threshold--open .door-seam::after {
-  height: 100%;
-}
-
-/* Light spilling under the door onto the floor between you and it. */
-.door-spill {
-  width: min(430px, 88%);
-  height: 16px;
-  flex-shrink: 0;
-  background: radial-gradient(60% 100% at 50% 0, rgba(59, 169, 232, 0.32), transparent 75%);
-  opacity: calc(0.18 + var(--door-progress, 0) * 0.82);
-  transition: opacity 0.5s ease;
-}
-
-.threshold--idle .door-spill {
-  opacity: 0.14;
-}
-
-.door-plaque {
-  margin-top: 6px;
-  font-family: var(--rc-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.26em;
-  text-transform: uppercase;
-  color: var(--rc-dim);
-  transition: color 0.3s ease;
-}
-
-.threshold--open .door-plaque {
-  color: var(--rc-ink);
-}
-
-.threshold--halted .door-plaque {
-  color: var(--rc-danger);
-}
-
-/* ---- Conversation --------------------------------------------------------- */
-
-.chat-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: var(--rc-border) transparent;
-  /* Messages dissolve as they leave, instead of clipping at the masthead. */
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 30px);
-  mask-image: linear-gradient(180deg, transparent 0, #000 30px);
-}
-
-.chat-messages {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  padding: 28px 2px 18px;
-}
-
-/* Anchor the conversation to the composer, chat-style. */
-.chat-messages > :first-child {
-  margin-top: auto;
-}
-
-.msg {
-  animation: msg-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-@keyframes msg-in {
+@keyframes rc-rise {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
-
-/* The Gamemaster: open narration, no bubble. */
-.msg-guide {
-  display: flex;
-  gap: 12px;
-  max-width: 88%;
+@keyframes rc-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
-
-.guide-glyph {
-  color: var(--rc-cyan);
-  font-size: 11px;
-  line-height: 2.4;
-  flex-shrink: 0;
+@keyframes rc-line {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
-
-.msg-guide--failed .guide-glyph {
-  color: var(--rc-danger);
+@keyframes rc-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.25;
+  }
 }
-
-.guide-body {
-  min-width: 0;
+@keyframes rc-flicker {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  42% {
+    opacity: 0.4;
+  }
+  68% {
+    opacity: 0.62;
+  }
 }
-
-.msg-guide p {
-  font-family: var(--rc-serif);
-  font-style: italic;
-  font-size: 18px;
-  line-height: 1.55;
-  color: var(--rc-ink);
-  letter-spacing: 0.01em;
-}
-
-.msg-guide--failed p {
-  color: color-mix(in srgb, var(--rc-danger) 75%, var(--rc-ink));
-}
-
-/* You: a sealed note. */
-.msg-user {
-  align-self: flex-end;
-  max-width: 78%;
-  background: rgba(122, 92, 255, 0.13);
-  border: 1px solid rgba(122, 92, 255, 0.38);
-  border-radius: 12px 12px 3px 12px;
-  padding: 10px 14px;
-}
-
-.msg-user p {
-  font-size: 15.5px;
-  line-height: 1.5;
-  color: var(--rc-ink);
-  white-space: pre-wrap;
-  overflow-wrap: break-word;
-}
-
-/* ---- Difficulty seals --------------------------------------------------- */
-
-.seal-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 10px;
-  margin-top: 14px;
-}
-
-.seal {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  text-align: left;
-  padding: 11px 12px 12px;
-  background: color-mix(in srgb, var(--rc-surface) 80%, transparent);
-  border: 1px solid var(--rc-border);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: border-color 0.16s ease, transform 0.16s ease, background 0.16s ease,
-    opacity 0.16s ease;
-}
-
-.seal:hover:not(:disabled) {
-  border-color: var(--rc-cyan);
-  transform: translateY(-1px);
-}
-
-.seal:disabled {
-  cursor: default;
-  opacity: 0.38;
-}
-
-.seal.is-picked {
-  opacity: 1;
-  border-color: var(--rc-cyan);
-  background: rgba(59, 169, 232, 0.09);
-}
-
-.seal-head {
-  font-family: var(--rc-mono);
-  font-size: 13px;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-  color: var(--rc-ink);
-}
-
-.seal-head b {
-  color: var(--rc-cyan);
-  font-weight: 400;
-  margin-right: 7px;
-  letter-spacing: 0.14em;
-}
-
-.seal-blurb {
-  font-size: 12.5px;
-  line-height: 1.45;
-  color: var(--rc-dim);
-}
-
-.retry-row {
-  display: flex;
-}
-
-.seal--retry {
-  max-width: 300px;
-}
-
-.seal--retry .seal-head b {
-  letter-spacing: 0;
-}
-
-/* ---- Composer ------------------------------------------------------------ */
-
-.composer {
-  display: flex;
-  flex-shrink: 0;
-  align-items: flex-end;
-  gap: 10px;
-  background: var(--rc-raised);
-  border: 1px solid var(--rc-border);
-  border-radius: 12px;
-  padding: 10px 10px 10px 16px;
-  transition: border-color 0.16s ease, opacity 0.2s ease;
-}
-
-.composer:focus-within {
-  border-color: var(--rc-violet);
-}
-
-.composer textarea {
-  flex: 1;
-  background: none;
-  border: none;
-  resize: none;
-  color: var(--rc-ink);
-  font-family: inherit;
-  font-size: 15.5px;
-  line-height: 1.5;
-  padding: 4px 0;
-  max-height: 140px;
-}
-
-.composer textarea:focus {
-  outline: none;
-}
-
-.composer textarea::placeholder {
-  color: var(--rc-dim);
-}
-
-.composer textarea:disabled {
-  color: var(--rc-dim);
-}
-
-.composer-send {
-  font-family: var(--rc-mono);
-  font-size: 13px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: #06131c;
-  background: var(--rc-cyan);
-  border: none;
-  border-radius: 8px;
-  padding: 9px 16px;
-  cursor: pointer;
-  transition: background 0.15s ease, opacity 0.15s ease;
-}
-
-.composer-send:hover:not(:disabled) {
-  background: #2a7bab;
-}
-
-.composer-send:disabled {
-  cursor: default;
-  opacity: 0.35;
-}
-
-.composer-hint {
-  flex-shrink: 0;
-  font-family: var(--rc-mono);
-  font-size: 10.5px;
-  letter-spacing: 0.1em;
-  color: var(--rc-dim);
-  opacity: 0.7;
-  padding: 7px 4px 0;
-}
-
-/* ---- Build ledger (the signature) ---------------------------------------- */
-
-.ledger {
-  position: relative;
-  margin-top: 14px;
-  background: color-mix(in srgb, var(--rc-surface) 82%, transparent);
-  border: 1px solid var(--rc-border);
-  border-radius: 10px;
-  padding: 13px 16px 14px 24px;
-  max-height: 38vh;
-  overflow-y: auto;
-  animation: msg-in 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
-}
-
-/* The seam: a track down the left edge that fills as the door unseals. */
-.ledger-seam {
-  position: absolute;
-  left: 9px;
-  top: 13px;
-  bottom: 14px;
-  width: 2px;
-  background: var(--rc-border);
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.ledger-seam i {
-  display: block;
-  width: 100%;
-  background: linear-gradient(180deg, var(--rc-cyan), var(--rc-violet));
-  transition: height 0.5s cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-.ledger-head {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--rc-mono);
-  font-size: 11px;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: var(--rc-dim);
-  margin-bottom: 10px;
-}
-
-.ledger-stages {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-}
-
-.ledger-line {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
-  font-family: var(--rc-mono);
-  font-size: 13.5px;
-  letter-spacing: 0.03em;
-  color: var(--rc-dim);
-  transition: color 0.25s ease, opacity 0.25s ease;
-}
-
-.ledger-line.is-pending {
-  opacity: 0.45;
-}
-
-.ledger-line.is-active {
-  color: var(--rc-ink);
-}
-
-.ledger-line.is-done {
-  opacity: 0.85;
-}
-
-.ledger-glyph {
-  width: 15px;
-  flex-shrink: 0;
-  text-align: center;
-  color: var(--rc-cyan);
-}
-
-.ledger-line.is-pending .ledger-glyph {
-  color: var(--rc-dim);
-}
-
-.ledger-line.is-active .ledger-glyph {
-  display: inline-block;
-  animation: glyph-turn 1.5s linear infinite;
-}
-
-@keyframes glyph-turn {
+@keyframes rc-spin {
   to {
     transform: rotate(360deg);
   }
 }
 
-.ledger-note {
-  font-family: var(--rc-mono);
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--rc-wax);
-  margin-top: 9px;
-  padding-left: 25px;
-  text-indent: -25px;
+/* ---- Header ---------------------------------------------------------------- */
+
+.rc-header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 26px 44px;
+  flex-wrap: wrap;
+  animation: rc-fade 0.9s ease both;
 }
 
-.ledger-note::before {
-  content: "▲ ";
-  letter-spacing: 0.25em;
+.rc-brandmark {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.ledger-door {
+.rc-brandmark-ring {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid rgba(201, 162, 39, 0.75);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rc-brandmark-ring i {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.rc-brandmark-ring i::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--rc-gold);
+  display: block;
+}
+
+.rc-brandmark-ring i::after {
+  content: "";
+  width: 2px;
+  height: 6px;
+  background: var(--rc-gold);
+  display: block;
+}
+
+.rc-wordmark {
   font-family: var(--rc-serif);
-  font-style: italic;
-  font-size: 15.5px;
+  font-size: 17px;
+  letter-spacing: 0.22em;
   color: var(--rc-ink);
-  margin-top: 11px;
 }
 
-.ledger-halt {
+.rc-nav {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--rc-ink-dim);
+  flex-wrap: wrap;
+}
+
+.rc-btn-reset {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border: none;
   font-family: var(--rc-mono);
+}
+
+.rc-gallery-toggle {
+  font-size: 11px;
+  letter-spacing: 0.24em;
+  color: var(--rc-ink-dim);
+  transition: color 0.15s ease;
+}
+
+.rc-gallery-toggle:hover,
+.rc-gallery-toggle.is-open {
+  color: var(--rc-gold-hi);
+}
+
+.rc-gallery-toggle span {
+  color: var(--rc-ink-faint);
+  font-size: 10px;
+}
+
+.rc-nav-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--rc-line);
+}
+
+.rc-join {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--rc-line);
+}
+
+.rc-join-input {
+  width: 130px;
+  background: transparent;
+  border: none;
+  font-family: var(--rc-mono);
+  font-size: 10px;
+  letter-spacing: 0.15em;
+  color: var(--rc-ink);
+  padding: 9px 12px;
+}
+
+.rc-join-input::placeholder {
+  color: var(--rc-ink-faint);
+}
+
+.rc-join-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  color: var(--rc-gold);
+  background: rgba(201, 162, 39, 0.08);
+  border: none;
+  border-left: 1px solid var(--rc-line);
+  padding: 9px 14px;
+  transition: color 0.15s ease;
+}
+
+.rc-join-btn:hover {
+  color: var(--rc-gold-hi);
+}
+
+.rc-join-msg {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  white-space: nowrap;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--rc-ink-dim);
+  background: #131a17;
+  border: 1px solid var(--rc-line);
+  padding: 8px 12px;
+  animation: rc-fade 0.3s ease both;
+  z-index: 25;
+}
+
+.rc-join-msg.is-ok {
+  color: var(--rc-gold);
+}
+
+/* ---- Gallery panel ---------------------------------------------------------- */
+
+.rc-gallery-panel {
+  position: relative;
+  margin: 0 44px 8px;
+  padding: 18px 22px;
+  border: 1px solid var(--rc-line);
+  background: var(--rc-surface);
+  animation: rc-rise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  z-index: 20;
+}
+
+.rc-gallery-title {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--rc-ink-faint);
+  padding-bottom: 12px;
+}
+
+.rc-gallery-empty {
   font-size: 12px;
-  letter-spacing: 0.1em;
+  color: var(--rc-ink-faint);
+  padding: 6px 0 4px;
+}
+
+.rc-gallery-row {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(232, 226, 212, 0.08);
+  flex-wrap: wrap;
+}
+
+.rc-gallery-code {
+  font-family: var(--rc-serif);
+  font-size: 13px;
+  color: var(--rc-gold);
+  width: 96px;
+  flex-shrink: 0;
+}
+
+.rc-gallery-theme {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--rc-ink-dim);
+  width: 90px;
+  flex-shrink: 0;
   text-transform: uppercase;
-  color: var(--rc-danger);
-  margin-top: 11px;
 }
 
-/* ---- Door flash (ready -> room) ------------------------------------------ */
-
-.door-flash {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
+.rc-gallery-diff {
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--rc-ink-faint);
+  width: 70px;
+  flex-shrink: 0;
 }
 
-.door-flash::before {
+.rc-gallery-brief {
+  font-size: 12px;
+  color: rgba(232, 226, 212, 0.6);
+  flex: 1;
+  min-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rc-gallery-copy {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--rc-line);
+  color: rgba(232, 226, 212, 0.5);
+  font-family: var(--rc-mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  padding: 6px 10px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rc-gallery-copy:hover {
+  color: var(--rc-gold-hi);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.rc-gallery-hint {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  color: var(--rc-ink-faint);
+  padding-top: 10px;
+}
+
+/* ---- Main ------------------------------------------------------------------ */
+
+.rc-main {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 24px 12px;
+  gap: 30px;
+}
+
+.rc-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+  animation: rc-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rc-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.34em;
+  color: var(--rc-gold);
+}
+
+.rc-title {
+  margin: 0;
+  font-family: var(--rc-serif);
+  font-weight: 400;
+  font-size: clamp(40px, 6.4vw, 84px);
+  line-height: 1.04;
+  letter-spacing: 0.01em;
+  color: #f0ead9;
+}
+
+.rc-title-accent {
+  color: var(--rc-gold);
+}
+
+.rc-subtitle {
+  margin: 0;
+  max-width: 520px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--rc-ink-dim);
+}
+
+/* ---- Brief console --------------------------------------------------------- */
+
+.rc-console {
+  position: relative;
+  width: min(720px, 94vw);
+  border: 1px solid var(--rc-line);
+  background: linear-gradient(180deg, rgba(23, 30, 26, 0.92), rgba(16, 22, 19, 0.92));
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.5);
+  animation: rc-rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+.rc-console::before,
+.rc-console::after {
   content: "";
   position: absolute;
-  left: 50%;
-  top: 0;
-  bottom: 0;
-  width: 2px;
-  margin-left: -1px;
-  background: linear-gradient(180deg, var(--rc-cyan), var(--rc-violet));
-  animation: door-open 1.1s ease-in 0.45s both;
+  width: 18px;
+  height: 18px;
 }
 
-@keyframes door-open {
-  0% {
-    opacity: 0;
-    transform: scaleX(1);
-  }
-  25% {
-    opacity: 0.85;
-    transform: scaleX(1);
-  }
-  100% {
-    opacity: 0;
-    transform: scaleX(700);
-  }
+.rc-console::before {
+  top: -1px;
+  left: -1px;
+  border-top: 1px solid var(--rc-gold);
+  border-left: 1px solid var(--rc-gold);
 }
 
-/* ---- Small screens -------------------------------------------------------- */
-
-@media (max-width: 560px) {
-  .seal-row {
-    grid-template-columns: 1fr;
-  }
-
-  .msg-guide {
-    max-width: 100%;
-  }
-
-  .msg-guide p {
-    font-size: 16.5px;
-  }
-
-  .door {
-    width: min(280px, 78%);
-  }
+.rc-console::after {
+  bottom: -1px;
+  right: -1px;
+  border-bottom: 1px solid var(--rc-gold);
+  border-right: 1px solid var(--rc-gold);
 }
 
-@media (max-height: 620px) {
-  .threshold {
-    padding-top: 8px;
+.rc-console-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 26px;
+  border-bottom: 1px solid rgba(232, 226, 212, 0.1);
+  flex-wrap: wrap;
+}
+
+.rc-console-label {
+  font-size: 11px;
+  letter-spacing: 0.3em;
+  color: var(--rc-ink-dim);
+}
+
+.rc-console-controls {
+  display: flex;
+  align-items: stretch;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* World dropdown */
+
+.rc-world {
+  position: relative;
+}
+
+.rc-world-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+  padding: 9px 16px;
+  border: 1px solid var(--rc-line);
+  background: transparent;
+  color: rgba(232, 226, 212, 0.7);
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rc-world-btn:hover,
+.rc-world-btn.is-open {
+  color: var(--rc-gold-hi);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.rc-world-btn-tag {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: var(--rc-ink-faint);
+}
+
+.rc-world-btn-val {
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  color: var(--rc-gold);
+}
+
+.rc-world-btn-caret {
+  font-size: 9px;
+  color: rgba(232, 226, 212, 0.4);
+}
+
+.rc-world-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: #131a17;
+  border: 1px solid var(--rc-line);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  z-index: 30;
+  animation: rc-fade 0.2s ease both;
+}
+
+.rc-world-option {
+  appearance: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  padding: 10px 16px;
+  border: none;
+  background: transparent;
+  color: rgba(232, 226, 212, 0.6);
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.rc-world-option:hover {
+  color: var(--rc-gold-hi);
+  background: rgba(201, 162, 39, 0.08);
+}
+
+.rc-world-option.is-active {
+  color: var(--rc-gold);
+  background: rgba(201, 162, 39, 0.1);
+}
+
+/* Difficulty toggle */
+
+.rc-diff-toggle {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--rc-line);
+}
+
+.rc-diff-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 9px 18px;
+  border: none;
+  border-left: 1px solid var(--rc-line);
+  background: transparent;
+  color: rgba(232, 226, 212, 0.45);
+  transition: background 0.25s, color 0.25s;
+}
+
+.rc-diff-btn:first-child {
+  border-left: none;
+}
+
+.rc-diff-btn:hover {
+  color: var(--rc-gold-hi);
+}
+
+.rc-diff-btn.is-active {
+  background: rgba(201, 162, 39, 0.14);
+  color: var(--rc-gold);
+}
+
+.rc-diff-numeral {
+  font-family: var(--rc-serif);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+}
+
+.rc-diff-label {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+}
+
+/* Textarea */
+
+.rc-brief-field {
+  padding: 22px 26px 8px;
+}
+
+.rc-textarea {
+  width: 100%;
+  resize: none;
+  background: transparent;
+  border: none;
+  font-family: var(--rc-serif);
+  font-size: 21px;
+  line-height: 1.55;
+  color: #f0ead9;
+  padding: 0;
+}
+
+.rc-textarea:focus {
+  outline: none;
+}
+
+.rc-textarea::placeholder {
+  color: rgba(232, 226, 212, 0.3);
+}
+
+.rc-textarea:disabled {
+  color: rgba(232, 226, 212, 0.5);
+}
+
+/* Seeds */
+
+.rc-seeds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 26px 20px;
+}
+
+.rc-seed {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  color: rgba(232, 226, 212, 0.55);
+  background: transparent;
+  border: 1px solid rgba(232, 226, 212, 0.14);
+  padding: 7px 14px;
+  transition: color 0.2s ease, border-color 0.2s ease;
+}
+
+.rc-seed:hover:not(:disabled) {
+  color: var(--rc-gold-hi);
+  border-color: rgba(201, 162, 39, 0.6);
+}
+
+.rc-seed:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* Footer row */
+
+.rc-console-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 26px;
+  border-top: 1px solid rgba(232, 226, 212, 0.1);
+  flex-wrap: wrap;
+}
+
+.rc-hint {
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: var(--rc-ink-faint);
+}
+
+.rc-craft-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  color: #0c110f;
+  background: var(--rc-gold);
+  border: none;
+  padding: 14px 26px;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.rc-craft-btn:hover:not(:disabled) {
+  background: var(--rc-gold-hi);
+}
+
+.rc-craft-btn:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.rc-craft-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+/* ---- Ledger ----------------------------------------------------------------- */
+
+.rc-ledger-wrap {
+  width: min(720px, 94vw);
+  min-height: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.rc-ledger-title {
+  font-size: 10px;
+  letter-spacing: 0.3em;
+  color: var(--rc-ink-faint);
+  padding: 2px 0 12px 2px;
+  animation: rc-fade 0.5s ease both;
+}
+
+.rc-ledger-line {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 7px 2px;
+  border-left: 1px solid rgba(201, 162, 39, 0.4);
+  padding-left: 18px;
+  animation: rc-line 0.45s ease both;
+}
+
+.rc-ledger-icon {
+  font-size: 12px;
+  color: var(--rc-gold);
+  width: 14px;
+  flex-shrink: 0;
+}
+
+.rc-ledger-line.is-active .rc-ledger-icon {
+  display: inline-block;
+  animation: rc-pulse 1.2s ease-in-out infinite;
+}
+
+.rc-ledger-text {
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  color: var(--rc-ink-dim);
+}
+
+.rc-ledger-line.is-active .rc-ledger-text {
+  color: var(--rc-ink);
+}
+
+.rc-ledger-stamp {
+  margin-left: auto;
+  font-size: 10px;
+  color: rgba(232, 226, 212, 0.28);
+  flex-shrink: 0;
+}
+
+.rc-ledger-note {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 2px 7px 18px;
+  border-left: 1px solid rgba(201, 162, 39, 0.4);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d9a154;
+  animation: rc-line 0.45s ease both;
+}
+
+.rc-ledger-note::before {
+  content: "▲";
+  letter-spacing: 0.25em;
+  flex-shrink: 0;
+}
+
+.rc-ledger-error {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 14px;
+  padding: 16px 20px;
+  border: 1px solid rgba(193, 82, 75, 0.5);
+  background: rgba(193, 82, 75, 0.08);
+  animation: rc-rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rc-ledger-error-text {
+  font-family: var(--rc-serif);
+  font-size: 15px;
+  color: var(--rc-ink);
+}
+
+.rc-ledger-error-actions {
+  display: flex;
+  gap: 20px;
+}
+
+.rc-ledger-error-actions button {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--rc-ink-dim);
+  transition: color 0.15s ease;
+}
+
+.rc-ledger-error-actions button:hover {
+  color: var(--rc-gold-hi);
+}
+
+.rc-ledger-error-actions button.is-primary {
+  color: var(--rc-danger);
+}
+
+.rc-ledger-error-actions button.is-primary:hover {
+  color: #e07068;
+}
+
+/* Door ready panel */
+
+.rc-door-ready {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  margin-top: 18px;
+  padding: 18px 22px;
+  border: 1px solid rgba(201, 162, 39, 0.5);
+  background: rgba(201, 162, 39, 0.06);
+  animation: rc-rise 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+  flex-wrap: wrap;
+}
+
+.rc-door-ready-title {
+  font-family: var(--rc-serif);
+  font-size: 19px;
+  color: #f0ead9;
+}
+
+.rc-door-ready-code {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.rc-door-ready-code-label {
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--rc-ink-faint);
+}
+
+.rc-door-ready-code-val {
+  font-family: var(--rc-serif);
+  font-size: 15px;
+  letter-spacing: 0.1em;
+  color: var(--rc-gold);
+}
+
+.rc-copy-btn {
+  appearance: none;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid var(--rc-line);
+  color: rgba(232, 226, 212, 0.55);
+  font-family: var(--rc-mono);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  padding: 4px 8px;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.rc-copy-btn:hover {
+  color: var(--rc-gold-hi);
+  border-color: rgba(201, 162, 39, 0.5);
+}
+
+.rc-door-ready-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.rc-startover-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  font-size: 11px;
+  letter-spacing: 0.2em;
+  color: rgba(232, 226, 212, 0.5);
+  background: transparent;
+  border: none;
+  transition: color 0.15s ease;
+}
+
+.rc-startover-btn:hover {
+  color: var(--rc-gold-hi);
+}
+
+.rc-enter-btn {
+  appearance: none;
+  cursor: pointer;
+  font-family: var(--rc-mono);
+  font-size: 12px;
+  letter-spacing: 0.24em;
+  color: #0c110f;
+  background: var(--rc-gold);
+  border: none;
+  padding: 13px 24px;
+  transition: background 0.15s ease;
+}
+
+.rc-enter-btn:hover {
+  background: var(--rc-gold-hi);
+}
+
+/* ---- Footer ------------------------------------------------------------------ */
+
+.rc-footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 22px 44px;
+  border-top: 1px solid rgba(232, 226, 212, 0.08);
+  font-size: 10px;
+  letter-spacing: 0.22em;
+  color: var(--rc-ink-faint);
+  animation: rc-fade 0.9s ease 0.3s both;
+  flex-wrap: wrap;
+}
+
+.rc-footer-steps {
+  display: flex;
+  gap: 40px;
+  flex-wrap: wrap;
+}
+
+.rc-footer-steps span {
+  color: var(--rc-gold);
+}
+
+/* ---- Small screens ------------------------------------------------------------ */
+
+@media (max-width: 640px) {
+  .rc-header,
+  .rc-footer {
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
-  .door-plaque {
+  .rc-gallery-panel {
+    margin-left: 20px;
+    margin-right: 20px;
+  }
+
+  .rc-console-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .rc-console-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .rc-gallery-brief {
     display: none;
   }
 }
 
-/* ---- Reduced motion -------------------------------------------------------- */
+/* ---- Reduced motion ------------------------------------------------------------ */
 
 @media (prefers-reduced-motion: reduce) {
-  .msg,
-  .ledger {
+  .rc-header,
+  .rc-hero,
+  .rc-console,
+  .rc-gallery-panel,
+  .rc-ledger-title,
+  .rc-ledger-line,
+  .rc-ledger-note,
+  .rc-ledger-error,
+  .rc-door-ready,
+  .rc-footer,
+  .rc-join-msg,
+  .rc-world-menu,
+  .rc-glow {
     animation: none !important;
   }
 
-  .ledger-line.is-active .ledger-glyph {
+  .rc-ledger-line.is-active .rc-ledger-icon {
     animation: none !important;
   }
 
-  .ledger-seam i {
-    transition: none;
-  }
-
-  .door-leaf {
-    transition: none;
-  }
-
-  .door-seam::after,
-  .door-spill {
-    transition: none;
-    animation: none !important;
-  }
-
-  .door-flash {
-    display: none;
-  }
-
-  .seal:hover:not(:disabled) {
+  .rc-craft-btn:active:not(:disabled) {
     transform: none;
   }
 }

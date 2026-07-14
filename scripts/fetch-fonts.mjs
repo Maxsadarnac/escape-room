@@ -3,7 +3,7 @@ import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const FONT_URL =
-  "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Share+Tech+Mono&family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Pirata+One&family=IM+Fell+English:ital@0;1&family=Oswald:wght@400;500;700&family=Special+Elite&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=Nunito:wght@400;600;700&family=Rajdhani:wght@500;600;700&display=swap";
+  "https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;700&family=Share+Tech+Mono&family=Cinzel:wght@500;700;900&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=Pirata+One&family=IM+Fell+English:ital@0;1&family=Oswald:wght@400;500;700&family=Special+Elite&family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;0,9..144,900;1,9..144,400&family=Nunito:wght@400;600;700&family=Rajdhani:wght@500;600;700&family=Marcellus&family=Fragment+Mono:ital@0;1&display=swap";
 
 // Latin-only demo: English escape-room content. Keep latin + latin-ext for
 // punctuation / accented characters that show up in themes.

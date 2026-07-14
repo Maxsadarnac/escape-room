@@ -1,20 +1,32 @@
 /* =========================================================================
-   The 3D room: shell, per-family decor, mood-reactive lighting, camera rig
-   (cinematic intro -> bounded OrbitControls), and the interactive props.
+   The 3D room: textured shell, per-family decor, mood-reactive lighting,
+   camera rig (cinematic intro -> bounded OrbitControls), the interactive
+   props, and a per-family post chain (AO + bloom + grain + vignette).
 
-   Everything is primitive geometry; all colors flow from the families.css
-   tokens via familyPresets. Lighting lerps with solve progress so the room
-   itself registers the player's advance.
+   Geometry is primitive; surfaces come from procedural canvas textures
+   (surfaces.js) tinted by the families.css tokens via familyPresets, so
+   the palette pipeline still owns every color. Lighting lerps with solve
+   progress so the room itself registers the player's advance.
    ========================================================================= */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { OrbitControls, Sparkles } from "@react-three/drei";
 import * as THREE from "three";
 import { ROOM } from "./layoutRoom";
 import { buildMood } from "./familyPresets";
+import { getSurfaces, surfaceMaterialProps } from "./surfaces";
+import { PostEffects, EnvironmentLight } from "./postfx";
 import { InteractiveProp } from "./archetypes";
+import { Architecture } from "./architecture";
+import ExitDoor from "./ExitDoor";
 import { SceneContext } from "./SceneContext";
+
+// Dev-only perf HUD. A dynamic import (rather than a static one gated by a
+// runtime `if`) is what actually keeps r3f-perf's code out of the production
+// bundle — Vite/Rollup drops `import.meta.env.DEV`-guarded dynamic imports
+// during a production build instead of just skipping the call at runtime.
+const Perf = import.meta.env.DEV ? lazy(() => import("r3f-perf").then((m) => ({ default: m.Perf }))) : null;
 
 const { halfW, halfD, width, depth, height } = ROOM;
 
@@ -205,8 +217,8 @@ function MoodLights({ mood, progress, reducedMotion }) {
         position={mood.key.position}
         intensity={mood.key.start}
         castShadow={mood.key.shadows}
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
+        shadow-mapSize-width={2048}
+        shadow-mapSize-height={2048}
         shadow-camera-left={-9}
         shadow-camera-right={9}
         shadow-camera-top={7}
@@ -231,38 +243,44 @@ function MoodLights({ mood, progress, reducedMotion }) {
 
 /* ---- Room shell ---------------------------------------------------------- */
 
-function RoomShell({ mood }) {
+function RoomShell({ mood, surfaces }) {
   const { floor, wall, ceiling, trim } = mood.shell;
+  // Texture repeats are matched to each plane's world size; clones share
+  // the same canvas uploads.
+  const mats = useMemo(
+    () => ({
+      floor: surfaceMaterialProps(surfaces.floor, width, depth),
+      wallZ: surfaceMaterialProps(surfaces.wall, width, height),
+      wallX: surfaceMaterialProps(surfaces.wall, depth, height),
+      ceiling: surfaceMaterialProps(surfaces.wall, width, depth),
+    }),
+    [surfaces]
+  );
   return (
     <group>
       <mesh rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color={floor} roughness={0.94} />
+        <meshStandardMaterial color={floor} {...mats.floor} />
       </mesh>
       <mesh position={[0, height, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[width, depth]} />
-        <meshStandardMaterial color={ceiling} roughness={1} />
+        <meshStandardMaterial color={ceiling} {...mats.ceiling} roughness={1} metalness={0} />
       </mesh>
-      {/* walls, facing inward */}
-      <mesh position={[0, height / 2, -halfD]} receiveShadow>
-        <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wall} roughness={0.92} />
-      </mesh>
+      {/* walls, facing inward — the -z wall belongs to the ExitDoor */}
       <mesh position={[0, height / 2, halfD]} rotation={[0, Math.PI, 0]} receiveShadow>
         <planeGeometry args={[width, height]} />
-        <meshStandardMaterial color={wall} roughness={0.92} />
+        <meshStandardMaterial color={wall} {...mats.wallZ} />
       </mesh>
       <mesh position={[-halfW, height / 2, 0]} rotation={[0, Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[depth, height]} />
-        <meshStandardMaterial color={wall} roughness={0.92} />
+        <meshStandardMaterial color={wall} {...mats.wallX} />
       </mesh>
       <mesh position={[halfW, height / 2, 0]} rotation={[0, -Math.PI / 2, 0]} receiveShadow>
         <planeGeometry args={[depth, height]} />
-        <meshStandardMaterial color={wall} roughness={0.92} />
+        <meshStandardMaterial color={wall} {...mats.wallX} />
       </mesh>
-      {/* baseboards */}
+      {/* baseboards (the -z run comes with the ExitDoor's wall segments) */}
       {[
-        { pos: [0, 0.09, -halfD + 0.04], size: [width, 0.18, 0.08] },
         { pos: [0, 0.09, halfD - 0.04], size: [width, 0.18, 0.08] },
         { pos: [-halfW + 0.04, 0.09, 0], size: [0.08, 0.18, depth] },
         { pos: [halfW - 0.04, 0.09, 0], size: [0.08, 0.18, depth] },
@@ -304,9 +322,10 @@ function SciFiDecor({ tokens }) {
         <boxGeometry args={[4.6, 0.07, 1.4]} />
         <GlowMat color={strip} intensity={1.1} />
       </mesh>
-      {/* perimeter light strips */}
+      {/* perimeter light strips (the -z run splits around the exit door) */}
       {[
-        { pos: [0, 2.7, -halfD + 0.03], size: [width - 0.4, 0.05, 0.05] },
+        { pos: [-5.05, 2.7, -halfD + 0.03], size: [5.5, 0.05, 0.05] },
+        { pos: [5.05, 2.7, -halfD + 0.03], size: [5.5, 0.05, 0.05] },
         { pos: [0, 2.7, halfD - 0.03], size: [width - 0.4, 0.05, 0.05] },
         { pos: [-halfW + 0.03, 2.7, 0], size: [0.05, 0.05, depth - 0.4] },
         { pos: [halfW - 0.03, 2.7, 0], size: [0.05, 0.05, depth - 0.4] },
@@ -349,9 +368,10 @@ function FantasyDecor({ tokens }) {
           </mesh>
         </group>
       ))}
-      {/* gilt picture rail */}
+      {/* gilt picture rail (split around the exit door) */}
       {[
-        { pos: [0, 3.4, -halfD + 0.03], size: [width - 0.6, 0.07, 0.06] },
+        { pos: [-5.0, 3.4, -halfD + 0.03], size: [5.4, 0.07, 0.06] },
+        { pos: [5.0, 3.4, -halfD + 0.03], size: [5.4, 0.07, 0.06] },
         { pos: [0, 3.4, halfD - 0.03], size: [width - 0.6, 0.07, 0.06] },
         { pos: [-halfW + 0.03, 3.4, 0], size: [0.06, 0.07, depth - 0.6] },
         { pos: [halfW - 0.03, 3.4, 0], size: [0.06, 0.07, depth - 0.6] },
@@ -364,7 +384,7 @@ function FantasyDecor({ tokens }) {
       {/* round rug under the orbit center */}
       <mesh position={[0, 0.012, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <circleGeometry args={[2.1, 40]} />
-        <meshStandardMaterial color={new THREE.Color(gold).multiplyScalar(0.22)} roughness={1} />
+        <meshStandardMaterial color={new THREE.Color(gold).multiplyScalar(0.14)} roughness={1} />
       </mesh>
     </group>
   );
@@ -418,7 +438,7 @@ function NoirDecor({ tokens }) {
       <group position={[-halfW + 0.05, 3.0, -2]} rotation={[0, Math.PI / 2, 0]}>
         <mesh>
           <boxGeometry args={[2.7, 1.8, 0.06]} />
-          <GlowMat color="#f2ead6" intensity={1.5} />
+          <GlowMat color="#f2ead6" intensity={1.05} />
         </mesh>
         {[-0.6, -0.2, 0.2, 0.6].map((y) => (
           <mesh key={y} position={[0, y, 0.05]}>
@@ -476,17 +496,6 @@ function NatureDecor({ tokens }) {
           <DarkMat color={green} />
         </mesh>
       ))}
-      {/* moss patches */}
-      {[
-        [-3.4, 0.013, 2.6, 1.2],
-        [2.8, 0.013, -3.1, 0.9],
-        [4.6, 0.013, 2.2, 0.7],
-      ].map(([x, y, z, r], i) => (
-        <mesh key={i} position={[x, y, z]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[r, 24]} />
-          <meshStandardMaterial color={green} roughness={1} transparent opacity={0.5} />
-        </mesh>
-      ))}
     </group>
   );
 }
@@ -502,8 +511,8 @@ function CyberpunkDecor({ tokens }) {
   ];
   return (
     <group>
-      {/* neon sign frames */}
-      <group position={[0, 3.1, -halfD + 0.08]}>
+      {/* neon sign frames (clear of the exit door) */}
+      <group position={[-4.9, 3.1, -halfD + 0.08]}>
         {frame(3.2, 1.4).map((s, i) => (
           <mesh key={i} position={s.pos}>
             <boxGeometry args={s.size} />
@@ -549,8 +558,10 @@ const DECOR = {
 function DevProbe({ layout }) {
   const camera = useThree((s) => s.camera);
   const size = useThree((s) => s.size);
+  const scene = useThree((s) => s.scene);
   useEffect(() => {
     window.__room3dProbe = {
+      scene,
       props: layout
         .filter((p) => p.interactive)
         .map((p) => ({ id: p.id, puzzleId: p.puzzleId, label: p.label })),
@@ -559,7 +570,7 @@ function DevProbe({ layout }) {
         if (!prop) return null;
         const v = new THREE.Vector3(
           prop.position[0],
-          prop.position[1] + (prop.wallMounted ? 0 : 1.0),
+          prop.position[1] + (prop.exitDoor ? 1.8 : prop.wallMounted ? 0 : 1.0),
           prop.position[2]
         ).project(camera);
         return {
@@ -572,7 +583,7 @@ function DevProbe({ layout }) {
     return () => {
       delete window.__room3dProbe;
     };
-  }, [layout, camera, size]);
+  }, [layout, camera, size, scene]);
   return null;
 }
 
@@ -607,6 +618,8 @@ export default function Room3D({
     [room]
   );
 
+  const surfaces = useMemo(() => getSurfaces(family), [family]);
+
   const sceneCtx = useMemo(
     () => ({ reducedMotion, paletteHints }),
     [reducedMotion, paletteHints]
@@ -620,6 +633,7 @@ export default function Room3D({
   };
 
   const Decor = DECOR[family] || SciFiDecor;
+  const exitProp = layout.find((p) => p.exitDoor) || null;
 
   return (
     <Canvas
@@ -634,7 +648,21 @@ export default function Room3D({
         <fog attach="fog" args={[mood.fog.color, mood.fog.near, mood.fog.far]} />
 
         <MoodLights mood={mood} progress={progress} reducedMotion={reducedMotion} />
-        <RoomShell mood={mood} />
+        <EnvironmentLight intensity={mood.post.env} />
+        <RoomShell mood={mood} surfaces={surfaces} />
+        <Architecture family={family} tokens={tokens} shell={mood.shell} layout={layout} />
+        <ExitDoor
+          prop={exitProp}
+          state={exitProp ? stateFor(exitProp) : "decor"}
+          tokens={tokens}
+          shell={mood.shell}
+          surfaces={surfaces}
+          progress={progress}
+          solvedCount={solved.size}
+          total={room.puzzles.length}
+          enabled={phase === "live"}
+          onSelect={onSelectObject}
+        />
         <Decor tokens={tokens} />
 
         {!reducedMotion && (
@@ -663,17 +691,19 @@ export default function Room3D({
           </>
         )}
 
-        {layout.map((prop) => (
-          <InteractiveProp
-            key={prop.id}
-            prop={prop}
-            state={stateFor(prop)}
-            tokens={tokens}
-            family={family}
-            enabled={phase === "live"}
-            onSelect={onSelectObject}
-          />
-        ))}
+        {layout
+          .filter((prop) => !prop.exitDoor)
+          .map((prop) => (
+            <InteractiveProp
+              key={prop.id}
+              prop={prop}
+              state={stateFor(prop)}
+              tokens={tokens}
+              family={family}
+              enabled={phase === "live"}
+              onSelect={onSelectObject}
+            />
+          ))}
 
         {/* finale: the room celebrates while the completion screen holds off */}
         {progress >= 1 && !reducedMotion && (
@@ -695,7 +725,14 @@ export default function Room3D({
           reducedMotion={reducedMotion}
         />
 
+        <PostEffects post={mood.post} reducedMotion={reducedMotion} />
+
         {import.meta.env.DEV && <DevProbe layout={layout} />}
+        {Perf && (
+          <Suspense fallback={null}>
+            <Perf position="bottom-right" minimal={false} matrixUpdate deepAnalyze={false} />
+          </Suspense>
+        )}
       </SceneContext.Provider>
     </Canvas>
   );

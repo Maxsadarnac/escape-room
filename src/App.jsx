@@ -109,6 +109,20 @@ function App() {
     setScreen("intake");
   };
 
+  // Manual entry: the intake's "ENTER THE ROOM" button, or a gallery/join-code
+  // pick loading a room saved from a past generation (bypasses generation
+  // entirely). Either way, cancel the auto-reveal timer so it can't fire late
+  // and stomp a room the user already navigated away from.
+  const handleEnterRoom = (targetRoom) => {
+    clearTimeout(revealTimer.current);
+    if (targetRoom && targetRoom !== room) {
+      setRoom(targetRoom);
+      setSolved(new Set());
+      setHintsRevealed({});
+    }
+    setScreen("room");
+  };
+
   if (screen === "room" && room) {
     return (
       <RoomScreen
@@ -129,6 +143,9 @@ function App() {
     <IntakeScreen
       onGenerate={handleGenerate}
       onRetry={handleRetry}
+      onRestart={handleRestart}
+      onEnterRoom={handleEnterRoom}
+      room={room}
       feed={feed}
       genState={genState}
       genError={genError}
