@@ -20,10 +20,13 @@ import { FAMILY_FINISH, propStatePalette } from "./familyPresets";
 
 /* ---- Material helper ---------------------------------------------------- */
 
-function Mat({ role, roughness = 0.85, metalness = 0.1 }) {
+// `anim` tags a material for idle animation handled centrally by
+// InteractiveProp's frame loop (e.g. "blink" gates the emissive on/off) —
+// archetypes stay declarative, the wrapper owns the clock.
+function Mat({ role, anim, roughness = 0.85, metalness = 0.1 }) {
   return (
     <meshStandardMaterial
-      userData={{ role }}
+      userData={{ role, anim }}
       color="#181818"
       emissive="#000000"
       roughness={roughness}
@@ -62,6 +65,11 @@ function Console() {
         <boxGeometry args={[1.2, 0.03, 0.36]} />
         <Mat role="glow" roughness={0.4} />
       </mesh>
+      {/* blinking cursor at the screen's edge — the console is mid-thought */}
+      <mesh position={[-0.48, 1.0, 0.14]} rotation={[-0.34, 0, 0]}>
+        <boxGeometry args={[0.05, 0.035, 0.02]} />
+        <Mat role="glow" anim="blink" roughness={0.4} />
+      </mesh>
       {/* button strips */}
       <mesh position={[-0.42, 0.9, 0.31]} rotation={[-0.34, 0, 0]}>
         <boxGeometry args={[0.36, 0.035, 0.09]} />
@@ -80,7 +88,15 @@ function Console() {
   );
 }
 
-function WallPanel() {
+function WallPanel({ seed = 0 }) {
+  const { reducedMotion } = useContext(SceneContext);
+  const scanRef = useRef();
+  // A slow scanline sweeping the live surface — the display is refreshing.
+  useFrame((state) => {
+    if (!scanRef.current || reducedMotion) return;
+    const phase = (state.clock.elapsedTime * 0.16 + seed) % 1;
+    scanRef.current.position.y = -0.42 + phase * 0.84;
+  });
   return (
     <group>
       {/* frame */}
@@ -92,6 +108,11 @@ function WallPanel() {
       <mesh position={[0, 0, 0.16]}>
         <boxGeometry args={[1.48, 0.93, 0.03]} />
         <Mat role="glow" roughness={0.35} />
+      </mesh>
+      {/* scanline */}
+      <mesh ref={scanRef} position={[0, 0, 0.182]}>
+        <boxGeometry args={[1.44, 0.022, 0.01]} />
+        <Mat role="glowSoft" roughness={0.4} />
       </mesh>
       {/* top edge light */}
       <mesh position={[0, 0.62, 0.12]}>
@@ -299,7 +320,17 @@ function Lectern() {
   );
 }
 
-function Machine() {
+function Machine({ seed = 0 }) {
+  const { reducedMotion } = useContext(SceneContext);
+  const needleRef = useRef();
+  // The front gauge's needle drifts and twitches — pressure somewhere in
+  // the pipes is alive.
+  useFrame((state) => {
+    if (!needleRef.current || reducedMotion) return;
+    const t = state.clock.elapsedTime;
+    needleRef.current.rotation.z =
+      Math.sin(t * 0.7 + seed * 6) * 0.85 + Math.sin(t * 3.1 + seed * 11) * 0.09;
+  });
   return (
     <group>
       <mesh castShadow position={[0, 0.13, 0]}>
@@ -342,6 +373,13 @@ function Machine() {
         <cylinderGeometry args={[0.09, 0.09, 0.02, 16]} />
         <Mat role="glowSoft" roughness={0.4} />
       </mesh>
+      {/* gauge needle */}
+      <group ref={needleRef} position={[0, 0.62, 0.52]}>
+        <mesh position={[0, 0.042, 0]}>
+          <boxGeometry args={[0.012, 0.075, 0.01]} />
+          <Mat role="glow" roughness={0.4} />
+        </mesh>
+      </group>
     </group>
   );
 }
@@ -349,11 +387,16 @@ function Machine() {
 function Pedestal() {
   const { reducedMotion } = useContext(SceneContext);
   const crystalRef = useRef();
-  useFrame((state) => {
-    if (!crystalRef.current || reducedMotion) return;
+  const haloRef = useRef();
+  useFrame((state, dt) => {
+    if (reducedMotion) return;
     const t = state.clock.elapsedTime;
-    crystalRef.current.rotation.y = t * 0.6;
-    crystalRef.current.position.y = 1.58 + Math.sin(t * 1.3) * 0.055;
+    if (crystalRef.current) {
+      crystalRef.current.rotation.y = t * 0.6;
+      crystalRef.current.position.y = 1.58 + Math.sin(t * 1.3) * 0.055;
+    }
+    // halo counter-rotates against the crystal, slightly off-axis
+    if (haloRef.current) haloRef.current.rotation.z -= dt * 0.45;
   });
   return (
     <group>
@@ -375,7 +418,7 @@ function Pedestal() {
         <Mat role="glow" roughness={0.25} metalness={0.2} />
       </mesh>
       {/* halo ring */}
-      <mesh position={[0, 1.58, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh ref={haloRef} position={[0, 1.58, 0]} rotation={[Math.PI / 2 + 0.12, 0, 0]}>
         <torusGeometry args={[0.4, 0.018, 10, 40]} />
         <Mat role="glowSoft" roughness={0.4} />
       </mesh>
@@ -704,7 +747,17 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
       else if (state === "locked") breathe = 1 + 0.45 * Math.sin(t * 0.85 + prop.seed * Math.PI * 2);
     }
 
-    const glowMult = (1 + anim.hover * 0.9 + pulseWave * 2.2) * breathe;
+    // Proximity: an active object senses the camera drawing close and
+    // brightens before you ever hover it — the room notices you looking.
+    let near = 0;
+    if (clickable && state === "active" && !reducedMotion && groupRef.current) {
+      const camDist = frame.camera.position.distanceTo(groupRef.current.position);
+      near = THREE.MathUtils.clamp((5.2 - camDist) / 3.2, 0, 1);
+    }
+
+    const glowMult = (1 + anim.hover * 0.9 + pulseWave * 2.2 + near * 0.35) * breathe;
+    // Blink-tagged emissives (console cursors) gate on a per-prop phase.
+    const blinkOn = reducedMotion || Math.sin(t * 3.4 + prop.seed * 9) > -0.2;
     for (const m of materialsRef.current) {
       const role = m.userData.role;
       if (role === "body") m.color.lerp(targets.body, k);
@@ -712,8 +765,9 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
       else if (role === "glow") {
         m.color.lerp(targets.glowBase, k);
         m.emissive.lerp(targets.glow, k);
+        const blink = m.userData.anim === "blink" && !blinkOn ? 0.12 : 1;
         m.emissiveIntensity = THREE.MathUtils.lerp(
-          m.emissiveIntensity, targets.glowIntensity * glowMult, k
+          m.emissiveIntensity, targets.glowIntensity * glowMult * blink, k
         );
       } else if (role === "glowSoft") {
         m.color.lerp(BLACK, k * 0.5);
@@ -730,10 +784,11 @@ export function InteractiveProp({ prop, state, tokens, family, enabled, onSelect
     }
     if (ringMatRef.current && ringMeshRef.current) {
       // The floor ring doubles as the solve ripple: it flares and expands
-      // outward once as the pulse decays, then returns to hover duty.
+      // outward once as the pulse decays, then returns to hover duty. A
+      // near camera also wakes it faintly (proximity affordance).
       ringMatRef.current.opacity = THREE.MathUtils.lerp(
         ringMatRef.current.opacity,
-        Math.max(anim.hover * 0.45, pulseWave * 0.6),
+        Math.max(anim.hover * 0.45, pulseWave * 0.6, near * 0.13),
         k
       );
       ringMatRef.current.color.lerp(targets.glow, k);

@@ -122,10 +122,16 @@ export default function ExitDoor({
     lampMats.current.forEach((m, i) => {
       if (!m) return;
       const lit = i < solvedCount || open;
-      m.emissive.copy(lit ? accent : lampDark);
+      // The next seal in line stirs faintly — the door is waiting on it.
+      const anticipating = !lit && i === solvedCount && !reducedMotion;
+      m.emissive.copy(lit || anticipating ? accent : lampDark);
       m.emissiveIntensity = THREE.MathUtils.lerp(
         m.emissiveIntensity,
-        lit ? 2.4 + hoverBoost * 0.5 : 0.05,
+        lit
+          ? 2.4 + hoverBoost * 0.5
+          : anticipating
+            ? 0.18 + 0.22 * (0.5 + 0.5 * Math.sin(t * 2.2))
+            : 0.05,
         k
       );
     });

@@ -49,6 +49,9 @@ function CameraRig({ phase, onIntroDone, focusProp, reducedMotion }) {
   // Focus glide state: where to return to, and the damped look-at point.
   const focusRef = useRef({ saved: null, look: new THREE.Vector3().copy(ORBIT_TARGET) });
   const [returning, setReturning] = useState(false);
+  // After ~9s without input the camera starts a barely-perceptible drift
+  // around the room; any interaction (or a focus glide) stops it.
+  const idleRef = useRef({ last: performance.now() });
   const curve = useMemo(
     () =>
       new THREE.CatmullRomCurve3(
@@ -72,7 +75,23 @@ function CameraRig({ phase, onIntroDone, focusProp, reducedMotion }) {
       camera.position.set(...INTRO_END);
       camera.lookAt(ORBIT_TARGET);
     }
+    if (phase === "live") idleRef.current.last = performance.now();
   }, [phase, camera]);
+
+  // User input resets the idle-drift timer.
+  useEffect(() => {
+    const c = controlsRef.current;
+    if (!c) return;
+    const bump = () => {
+      idleRef.current.last = performance.now();
+    };
+    c.addEventListener("start", bump);
+    c.addEventListener("end", bump);
+    return () => {
+      c.removeEventListener("start", bump);
+      c.removeEventListener("end", bump);
+    };
+  }, [phase]);
 
   useFrame((_, dt) => {
     if (phase === "waiting") {
@@ -96,6 +115,11 @@ function CameraRig({ phase, onIntroDone, focusProp, reducedMotion }) {
     // open, glide home when it closes, then hand back to OrbitControls.
     const f = focusRef.current;
     const k = 1 - Math.exp(-3.4 * Math.min(dt, 0.1));
+    if (focusProp) idleRef.current.last = performance.now();
+    if (controlsRef.current) {
+      controlsRef.current.autoRotate =
+        !focusProp && !f.saved && performance.now() - idleRef.current.last > 9000;
+    }
     if (focusProp) {
       if (!f.saved && controlsRef.current) {
         f.saved = {
@@ -150,8 +174,47 @@ function CameraRig({ phase, onIntroDone, focusProp, reducedMotion }) {
       maxPolarAngle={1.45}
       rotateSpeed={0.55}
       zoomSpeed={0.7}
+      autoRotateSpeed={0.22}
     />
   );
+}
+
+/* ---- Solve flash ---------------------------------------------------------
+   One pooled point light (always mounted so shader programs stay stable,
+   intensity 0 when idle) that bursts at a prop the moment its puzzle is
+   solved — the room itself answers the player. */
+
+function SolveFlash({ layout, solved, color, reducedMotion }) {
+  const lightRef = useRef();
+  const seenRef = useRef(new Set(solved));
+  const flashRef = useRef({ t: 0, pos: new THREE.Vector3(0, 2, 0) });
+
+  useEffect(() => {
+    for (const id of solved) {
+      if (seenRef.current.has(id)) continue;
+      seenRef.current.add(id);
+      const prop = layout.find((p) => p.puzzleId === id);
+      if (!prop) continue;
+      const f = flashRef.current;
+      if (prop.wallMounted || prop.exitDoor) {
+        // pull the light off the wall toward the room so it spills
+        f.pos.set(prop.position[0] * 0.82, Math.max(prop.position[1], 1.6), prop.position[2] * 0.82);
+      } else {
+        f.pos.set(prop.position[0], 1.8, prop.position[2]);
+      }
+      f.t = 1;
+    }
+  }, [solved, layout]);
+
+  useFrame((_, dt) => {
+    const f = flashRef.current;
+    if (!lightRef.current) return;
+    if (f.t > 0) f.t = Math.max(0, f.t - dt * 1.1);
+    lightRef.current.intensity = reducedMotion ? 0 : f.t * f.t * 60;
+    lightRef.current.position.copy(f.pos);
+  });
+
+  return <pointLight ref={lightRef} intensity={0} distance={9} decay={1.8} color={color} />;
 }
 
 /* ---- Mood lighting ------------------------------------------------------ */
@@ -648,6 +711,12 @@ export default function Room3D({
         <fog attach="fog" args={[mood.fog.color, mood.fog.near, mood.fog.far]} />
 
         <MoodLights mood={mood} progress={progress} reducedMotion={reducedMotion} />
+        <SolveFlash
+          layout={layout}
+          solved={solved}
+          color={tokens.accent}
+          reducedMotion={reducedMotion}
+        />
         <EnvironmentLight intensity={mood.post.env} />
         <RoomShell mood={mood} surfaces={surfaces} />
         <Architecture family={family} tokens={tokens} shell={mood.shell} layout={layout} />
