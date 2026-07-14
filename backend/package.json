@@ -1,0 +1,19 @@
+{
+  "name": "escape-room-backend",
+  "version": "1.0.0",
+  "description": "Backend for AI Escape Room Generator — /generate-room endpoint",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "express-rate-limit": "^8.5.2"
+  }
+}
