@@ -1,0 +1,120 @@
+{
+  "theme": "cozy library mystery",
+  "difficulty": "medium",
+  "story": {
+    "intro": "You're locked in the grand reading room of an old estate library. The librarian has vanished, leaving behind cryptic clues. You have one hour to uncover what happened and find the hidden exit.",
+    "outro": "You've solved the mystery! The librarian's secret is revealed, and the library's lock clicks open. As you step into the hallway, you spot a note: 'Thank you for believing in me. The truth was always on the shelves.'"
+  },
+  "scene": {
+    "palette": [
+      "#8B4513",
+      "#D2B48C",
+      "#2C1810"
+    ],
+    "mood": "warm, mysterious, scholarly",
+    "objects": [
+      {
+        "type": "shelf",
+        "position": [
+          1,
+          2,
+          0
+        ],
+        "puzzleId": "cipher_books",
+        "label": "ancient bookshelf"
+      },
+      {
+        "type": "desk",
+        "position": [
+          3,
+          1,
+          0
+        ],
+        "puzzleId": "riddle_desk",
+        "label": "librarian's desk"
+      },
+      {
+        "type": "painting",
+        "position": [
+          0,
+          3,
+          0
+        ],
+        "puzzleId": "pattern_codes",
+        "label": "portrait on the wall"
+      },
+      {
+        "type": "journal",
+        "position": [
+          2,
+          0,
+          0
+        ],
+        "puzzleId": "logic_numbers",
+        "label": "leather-bound journal"
+      }
+    ]
+  },
+  "puzzles": [
+    {
+      "id": "cipher_books",
+      "type": "cipher",
+      "prompt": "Carved into the ancient bookshelf's frame, you find a sequence of symbols. The librarian has left an encoded message here. Decode it to learn the first clue. The coded text reads: \"HMJHP YMJ QNGWFWNFS'X IJXP\"",
+      "plaintext": "check the librarian's desk",
+      "answer": "check the librarian's desk",
+      "hints": [
+        "The message uses a simple letter-shift cipher — every letter has moved the same number of steps in the alphabet.",
+        "Try shifting each letter backward by 5 positions.",
+        "Shifting each letter back by 5 reveals: \"CHECK THE LIBRARIAN'S DESK\"."
+      ],
+      "requires": [],
+      "shift": 5
+    },
+    {
+      "id": "riddle_desk",
+      "type": "riddle",
+      "prompt": "On the librarian's desk, you discover a handwritten riddle:\n\n'I have pages but cannot be read as stories,\nI mark where knowledge rests in all its glories.\nSlip me between the volumes where secrets sleep,\nAnd numbers will emerge from the depths I keep.\nWhat am I?'",
+      "plaintext": "",
+      "answer": "bookmark",
+      "hints": [
+        "Think of objects commonly found in libraries that interact with books.",
+        "It's something thin and flat, designed to mark a place.",
+        "Librarians use this daily—it goes between pages to save your spot."
+      ],
+      "requires": [
+        "cipher_books"
+      ]
+    },
+    {
+      "id": "pattern_codes",
+      "type": "pattern",
+      "prompt": "The portrait on the wall depicts a stern-faced scholar. Behind the frame, you find a sequence of numbers painted on the back: 5, 10, 20, 40, 80. What is the next number in the sequence?",
+      "plaintext": "",
+      "answer": "160",
+      "hints": [
+        "Look at how each number relates to the one before it.",
+        "Each number is multiplied by the same value to get the next.",
+        "The ratio is 2—multiply 80 by 2 to find the answer."
+      ],
+      "requires": [
+        "riddle_desk"
+      ]
+    },
+    {
+      "id": "logic_numbers",
+      "type": "logic",
+      "prompt": "Inside the leather-bound journal, you find the librarian's final notes:\n\n'Three clues unlock the mystery:\nFirst, the cipher revealed a location. Count its letters: ??\nSecond, the riddle's answer holds 8 letters.\nThird, the pattern's next number is 160.\n\nAdd the first clue's letter count, the second clue's letter count, and the third clue's digit sum (1+6+0). The total is your exit code.'",
+      "plaintext": "",
+      "answer": "27",
+      "hints": [
+        "The cipher message 'check the librarian's desk' has 20 letters if you count only the letters, not spaces or punctuation.",
+        "Add 20 (first clue letters) plus 8 (answer to riddle) plus the sum of digits in 160 (which is 1+6+0=7).",
+        "20 + 8 + 7 = 27"
+      ],
+      "requires": [
+        "pattern_codes"
+      ]
+    }
+  ],
+  "visualFamily": "fantasy"
+}

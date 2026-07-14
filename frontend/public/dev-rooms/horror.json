@@ -1,0 +1,166 @@
+{
+  "theme": "haunted spaceship",
+  "difficulty": "hard",
+  "story": {
+    "intro": "Your deep-space research vessel has fallen silent. The crew stopped responding three days ago. Now, drifting through the void, you detect faint signals and strange electromagnetic pulses. You've got one hour of oxygen. The captain's log hints at something in the engine core—something they were trying to contain. Find the override codes, unlock the bridge, and escape before the reactor goes critical.",
+    "outro": "The emergency beacon fires as your escape pod detaches. Behind you, the ship's reactor erupts in a blinding flash. The captain's final entry crackles through the static: 'It was already here when we boarded.' Your pod spins into the black, and you wonder what you really freed."
+  },
+  "scene": {
+    "palette": [
+      "#0a1929",
+      "#ff6b6b",
+      "#1e88e5"
+    ],
+    "mood": "claustrophobic dread, cold industrial horror, urgency",
+    "objects": [
+      {
+        "type": "wall_terminal",
+        "position": [
+          2.5,
+          1.8,
+          0
+        ],
+        "puzzleId": "cipher_log",
+        "label": "cracked wall terminal"
+      },
+      {
+        "type": "circuit_panel",
+        "position": [
+          5.2,
+          2.1,
+          1.3
+        ],
+        "puzzleId": "pattern_seq",
+        "label": "circuit breaker panel"
+      },
+      {
+        "type": "data_slate",
+        "position": [
+          1,
+          0.5,
+          2.8
+        ],
+        "puzzleId": "riddle_core",
+        "label": "crew data slate"
+      },
+      {
+        "type": "locked_door",
+        "position": [
+          7,
+          1.5,
+          0.5
+        ],
+        "puzzleId": "logic_fuel",
+        "label": "sealed engine bay door"
+      },
+      {
+        "type": "reactor_gauge",
+        "position": [
+          6.8,
+          3.2,
+          2
+        ],
+        "puzzleId": "logic_temp",
+        "label": "reactor temperature gauge"
+      },
+      {
+        "type": "bridge_console",
+        "position": [
+          3.5,
+          2.8,
+          3.5
+        ],
+        "puzzleId": "cipher_override",
+        "label": "bridge override console"
+      }
+    ]
+  },
+  "puzzles": [
+    {
+      "id": "cipher_log",
+      "type": "cipher",
+      "prompt": "The terminal flickers. A captain's personal log is encrypted—meant to stay hidden. Run the decryption routine. The coded text reads: \"AWUMBPQVO EIQBA QV BPM LIZS\"",
+      "plaintext": "something waits in the dark",
+      "answer": "something waits in the dark",
+      "hints": [
+        "The message uses a simple letter-shift cipher — every letter has moved the same number of steps in the alphabet.",
+        "Try shifting each letter backward by 8 positions.",
+        "Shifting each letter back by 8 reveals: \"SOMETHING WAITS IN THE DARK\"."
+      ],
+      "requires": [],
+      "shift": 8
+    },
+    {
+      "id": "pattern_seq",
+      "type": "pattern",
+      "prompt": "The circuit panel displays a degrading frequency sequence. Power fluctuations have warped the signal. Identify the next value to stabilize the grid.",
+      "answer": "49",
+      "hints": [
+        "Each step grows faster—think of how squares increase.",
+        "Start at 1, then 4, then 9, then 16, then 25, then 36. What is next?",
+        "The sequence is 1, 4, 9, 16, 25, 36, 49."
+      ],
+      "requires": []
+    },
+    {
+      "id": "riddle_core",
+      "type": "riddle",
+      "prompt": "The data slate hums with a fragmentary riddle, burned into memory before the crew went silent:\n\n'I have no breath, yet I fill the void.\nI am silent, yet heard by all who came before.\nI grow in cold, I fade in warmth.\nI am the beginning of the end.\nWhat am I?'",
+      "answer": "darkness",
+      "hints": [
+        "It is present everywhere in space—everywhere the crew looked.",
+        "It is the absence of something vital, felt more than seen.",
+        "The answer is 'darkness'—what consumes the ship and fear itself."
+      ],
+      "requires": [
+        "cipher_log"
+      ]
+    },
+    {
+      "id": "logic_fuel",
+      "type": "logic",
+      "prompt": "The sealed engine bay door shows a fuel-reserve cipher: 'Reactor tank A holds twice the core's capacity. Tank B holds 15 tons less than A. Tank C holds three times what B holds. If the core demands 110 tons total and A + B + C = 290 tons, how many tons does Tank B contain?'",
+      "answer": "65",
+      "hints": [
+        "Set up equations using the relationships between tanks, then solve systematically.",
+        "A = 2x, B = A - 15, C = 3B. All three sum to 290. Find B first.",
+        "Tank B contains 65 tons."
+      ],
+      "requires": [
+        "pattern_seq"
+      ]
+    },
+    {
+      "id": "logic_temp",
+      "type": "logic",
+      "prompt": "The reactor gauge displays a critical cascade warning. Sensor logs show: every minute, core temp rises by 3°C for the first 10 minutes, then by 6°C per minute thereafter. If the core started at 120°C and critical shutdown triggers at 300°C, how many minutes before meltdown?",
+      "answer": "20",
+      "hints": [
+        "Calculate in phases: rapid rise, then accelerated rise, until threshold.",
+        "First 10 minutes: +3°C/min = +30°C total (now 150°C). Then +6°C/min from minute 11 onward. How long to 300°C?",
+        "20 minutes total: 10 minutes at +3°C/min, then 10 more minutes at +6°C/min."
+      ],
+      "requires": [
+        "logic_fuel"
+      ]
+    },
+    {
+      "id": "cipher_override",
+      "type": "cipher",
+      "prompt": "The bridge console's final failsafe. A command phrase—the emergency shutdown protocol—is locked behind encryption. Decode it to trigger the escape sequence. The coded text reads: \"ITT PIVLA BW MAKIXM XWLA\"",
+      "plaintext": "all hands to escape pods",
+      "answer": "all hands to escape pods",
+      "hints": [
+        "The message uses a simple letter-shift cipher — every letter has moved the same number of steps in the alphabet.",
+        "Try shifting each letter backward by 8 positions.",
+        "Shifting each letter back by 8 reveals: \"ALL HANDS TO ESCAPE PODS\"."
+      ],
+      "requires": [
+        "riddle_core",
+        "logic_temp"
+      ],
+      "shift": 8
+    }
+  ],
+  "visualFamily": "horror-gothic"
+}
