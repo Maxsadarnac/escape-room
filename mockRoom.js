@@ -63,17 +63,14 @@ function buildMockRoom(theme, difficulty) {
         requires: ["p1_cipher"],
       },
       {
+        // Pattern contract: flavor-only prompt, no numbers — the server
+        // generates the sequence, answer, and hints (lib/patterns.js).
         id: "p3_pattern",
         type: "pattern",
         prompt:
-          "The dial array cycles four readings, then blinks where the fifth " +
-          "should be: 3, 6, 12, 24, ?",
-        answer: "48",
-        hints: [
-          "Watch how each reading relates to the one before it.",
-          "Every value is exactly twice its predecessor.",
-          "Double 24 and enter the result.",
-        ],
+          "The dial array cycles through a run of readings in a strict " +
+          "rhythm, then blinks where the next one should be — someone tuned " +
+          "these dials to a code.",
         requires: ["p1_cipher"],
       },
       {
