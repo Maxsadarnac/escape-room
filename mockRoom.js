@@ -29,6 +29,8 @@ function buildMockRoom(theme, difficulty) {
         { type: "book", position: [-2, 1, -2], puzzleId: "p2_riddle", label: "curator's ledger" },
         { type: "panel", position: [3, 1.5, 2], puzzleId: "p3_pattern", label: "signal dial array" },
         { type: "artifact", position: [-3, 1, 3], puzzleId: "p4_logic", label: "resonance pedestal" },
+        { type: "cabinet", position: [-4, 1, -1], puzzleId: "p5_observation", label: "inventory strongbox" },
+        { type: "machine", position: [4, 1, 0], puzzleId: "p6_arrangement", label: "relic balance rack" },
       ],
     },
     puzzles: [
@@ -88,6 +90,31 @@ function buildMockRoom(theme, difficulty) {
           "Twelve, nine, and seven together make 28.",
         ],
         requires: ["p2_riddle", "p3_pattern"],
+      },
+      {
+        // Observation contract: flavor-only prompt, no numbers, no named
+        // countables — the server appends the counting question built from
+        // the decor manifest (lib/observation.js).
+        id: "p5_observation",
+        type: "observation",
+        prompt:
+          "The strongbox bears no keyhole — only a small brass counter " +
+          "wheel. Something in here has been keeping inventory of the " +
+          "chamber's contents the whole time.",
+        requires: ["p1_cipher"],
+      },
+      {
+        // Arrangement contract: flavor-only prompt + 4-5 distinct item
+        // names — the server generates the secret order, clues, and answer
+        // format (lib/arrangement.js).
+        id: "p6_arrangement",
+        type: "arrangement",
+        prompt:
+          "Five hollows run across the balance rack, each shaped for one " +
+          "relic. The rack will only settle level when every relic rests " +
+          "in its true place.",
+        items: ["copper gyroscope", "sealed phial", "black lodestone", "etched tuning fork", "hollow prism"],
+        requires: ["p4_logic"],
       },
     ],
   };
