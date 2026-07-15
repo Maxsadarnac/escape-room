@@ -5,6 +5,9 @@ const TYPE_ICONS = {
   riddle: "📜",
   pattern: "🔷",
   logic: "🧮",
+  observation: "👁️",
+  arrangement: "🗝️",
+  meta: "🔏",
 };
 
 export default function PuzzleCard({ puzzle, label, locked, solved, hintsRevealed, onSolve, onRevealHint }) {
@@ -51,6 +54,9 @@ export default function PuzzleCard({ puzzle, label, locked, solved, hintsReveale
           <span className="puzzle-icon">✅</span>
           <h3>{headerLabel}</h3>
         </div>
+        {/* Meta-lock digit reveals: the finale needs these to stay readable
+            after the solve, so the player can come back and collect them. */}
+        {puzzle.reveal && <p className="puzzle-reveal">{puzzle.reveal}</p>}
       </div>
     );
   }

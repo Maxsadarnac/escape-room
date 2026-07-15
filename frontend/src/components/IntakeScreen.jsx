@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchRoomByCode } from "../api";
 import "../intake.css";
 
 /* Roomcraft Landing — the studio console you hand a brief to. Visual design
@@ -12,11 +13,13 @@ import "../intake.css";
      - the World selector nudges the theme text sent to the model (it
        doesn't override the brief — an empty/"any world" pick sends the
        brief untouched, so the model's own classification stays in charge)
-     - the gallery + join-code are real, backed by localStorage: a code
-       stores the *actual* generated room, and entering a known code loads
-       it directly, skipping generation. This only works within the same
-       browser (localStorage isn't shared across devices) — there's no
-       server-side room store, so it can't be a real multi-device feature. */
+     - the room code is real and server-backed: every generated room is
+       persisted by the backend (lib/roomStore) and returns with
+       room.shareCode; entering a code here fetches the exact stored room
+       from GET /rooms/:code, on any device that can reach the server. The
+       localStorage gallery remains as this browser's history and as a
+       fallback for legacy local-only "RC-" codes minted before the store
+       existed. */
 
 const WORLDS = [
   { id: "auto", label: "ANY WORLD", hint: null },
@@ -196,12 +199,13 @@ export default function IntakeScreen({ onGenerate, onRetry, onRestart, onEnterRo
     };
   }, [worldMenuOpen]);
 
-  // On a fresh success, mint a room code and save the *real* room into the
-  // local gallery (once per generation) so "join by code" can actually load it.
+  // On a fresh success, record the room in the local gallery (once per
+  // generation). The code is the server's share code — minting locally is
+  // only a fallback for the rare case persistence failed server-side.
   useEffect(() => {
     if (genState !== "ready" || !room || savedForRef.current === room) return;
     savedForRef.current = room;
-    const code = generateCode();
+    const code = room.shareCode || generateCode();
     const worldMeta = WORLDS.find((w) => w.id === world);
     const entry = {
       code,
@@ -267,17 +271,29 @@ export default function IntakeScreen({ onGenerate, onRetry, onRestart, onEnterRo
     navigator.clipboard?.writeText(code).catch(() => {});
   };
 
-  const doJoin = () => {
+  const doJoin = async () => {
     const code = joinCode.trim().toUpperCase();
     if (!code) return;
-    const found = gallery.find((g) => g.code === code);
-    if (found?.room) {
-      setJoinMessage(`FOUND · ${found.theme} · ${found.difficulty}`);
+    setJoinMessage("LOOKING UP…");
+    setJoinOk(false);
+    try {
+      const record = await fetchRoomByCode(code);
+      const family = (record.room.visualFamily || record.theme || "ROOM").toUpperCase();
+      setJoinMessage(`FOUND · ${family} · ${(record.difficulty || "").toUpperCase()}`);
       setJoinOk(true);
-      setTimeout(() => onEnterRoom(found.room), 350);
-    } else {
-      setJoinMessage("NO ROOM WITH THAT CODE");
-      setJoinOk(false);
+      setTimeout(() => onEnterRoom(record.room), 350);
+    } catch (err) {
+      // Legacy local-only codes (minted before the server store existed)
+      // still resolve from this browser's gallery.
+      const local = gallery.find((g) => g.code === code);
+      if (local?.room) {
+        setJoinMessage(`FOUND IN THIS BROWSER · ${local.theme} · ${local.difficulty}`);
+        setJoinOk(true);
+        setTimeout(() => onEnterRoom(local.room), 350);
+      } else {
+        setJoinMessage(err.notFound ? "NO ROOM WITH THAT CODE" : "ARCHIVE UNREACHABLE — TRY AGAIN");
+        setJoinOk(false);
+      }
     }
   };
 
@@ -346,7 +362,8 @@ export default function IntakeScreen({ onGenerate, onRetry, onRestart, onEnterRo
             ))
           )}
           <div className="rc-gallery-hint">
-            Codes live in this browser only — they won't work on another device.
+            Codes are stored on the server — share one and any device that can reach it can replay
+            the exact room. (Older RC- codes remain local to this browser.)
           </div>
         </div>
       )}
