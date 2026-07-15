@@ -99,10 +99,18 @@ export default function RoomScreen({ room, solved, hintsRevealed, onSolve, onRev
 
   /* ---- 2D fallback (no WebGL, or the 3D view crashed) ---- */
   if (use2D) {
+    // Observation puzzles count the 3D room's furnishings — without the 3D
+    // view, list the same server manifest as text so they stay solvable.
+    const decorItems = room.scene?.decor?.items || [];
     return (
       <div className={`screen room-screen family-${family}`} data-family={family}>
         <div className="story-block">
           <p>{room.story.intro}</p>
+          {decorItems.length > 0 && (
+            <p className="room-inventory">
+              Around the room: {decorItems.map((it) => `${it.count} ${it.label}`).join(" · ")}
+            </p>
+          )}
         </div>
         <div className="puzzle-list">
           {room.puzzles.map((puzzle) => (

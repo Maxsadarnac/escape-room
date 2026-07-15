@@ -19,6 +19,7 @@ import { getSurfaces, surfaceMaterialProps } from "./surfaces";
 import { PostEffects, EnvironmentLight } from "./postfx";
 import { InteractiveProp } from "./archetypes";
 import { Architecture } from "./architecture";
+import { SetDressing, buildFallbackManifest } from "./setDressing";
 import ExitDoor from "./ExitDoor";
 import { SceneContext } from "./SceneContext";
 
@@ -683,6 +684,13 @@ export default function Room3D({
 
   const surfaces = useMemo(() => getSurfaces(family), [family]);
 
+  // Server-authored set dressing; rooms generated before decor existed get
+  // a purely visual fallback manifest (no observation puzzle references it).
+  const decorManifest = useMemo(
+    () => room?.scene?.decor || buildFallbackManifest(family, room?.theme),
+    [room, family]
+  );
+
   const sceneCtx = useMemo(
     () => ({ reducedMotion, paletteHints }),
     [reducedMotion, paletteHints]
@@ -733,6 +741,13 @@ export default function Room3D({
           onSelect={onSelectObject}
         />
         <Decor tokens={tokens} />
+        <SetDressing
+          decor={decorManifest}
+          layout={layout}
+          family={family}
+          tokens={tokens}
+          reducedMotion={reducedMotion}
+        />
 
         {!reducedMotion && (
           <>

@@ -1,5 +1,38 @@
 const API_BASE = "http://localhost:3001";
 
+/**
+ * Retrieves a stored room by its share code (server-side store — codes work
+ * across devices). Resolves with { code, createdAt, theme, difficulty, room };
+ * throws with notFound=true when the code doesn't exist.
+ */
+export async function fetchRoomByCode(code) {
+  let response;
+  try {
+    response = await fetch(`${API_BASE}/rooms/${encodeURIComponent(code.trim())}`);
+  } catch {
+    const err = new Error("Could not reach the room archive. Is the backend running on localhost:3001?");
+    err.network = true;
+    throw err;
+  }
+
+  let data = null;
+  try {
+    data = await response.json();
+  } catch {
+    /* fall through to status handling */
+  }
+
+  if (response.status === 404) {
+    const err = new Error(data?.error || "No room with that code");
+    err.notFound = true;
+    throw err;
+  }
+  if (!response.ok || !data?.room) {
+    throw new Error(data?.error || `Room lookup failed (status ${response.status}).`);
+  }
+  return data;
+}
+
 export async function generateRoom(theme, difficulty) {
   let response;
   try {

@@ -126,6 +126,24 @@
   font-size: 13px;
 }
 
+/* Meta-lock digit reveal — must stay readable on the dimmed solved card */
+.puzzle-reveal {
+  color: var(--color-text);
+  font-size: 14px;
+  font-style: italic;
+  border-left: 2px solid var(--fam-accent, var(--color-border));
+  padding-left: 10px;
+}
+
+/* 2D fallback's decor inventory (stands in for looking around the 3D room) */
+.room-inventory {
+  margin-top: 12px;
+  font-size: 13px;
+  font-style: normal;
+  color: var(--color-text-dim);
+  letter-spacing: 0.04em;
+}
+
 .puzzle-prompt {
   font-size: 15px;
   line-height: 1.6;
