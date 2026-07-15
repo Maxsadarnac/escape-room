@@ -8,6 +8,11 @@ const { buildMockRoom } = require("./mockRoom");
 const { getValidationFailureReason } = require("./lib/validation");
 const { applyCipher } = require("./lib/ciphers");
 const { applyPattern } = require("./lib/patterns");
+const { buildDecor } = require("./lib/decor");
+const { applyObservation } = require("./lib/observation");
+const { applyArrangement } = require("./lib/arrangement");
+const { applyMetaLock } = require("./lib/metaLock");
+const { saveRoom, loadRoom } = require("./lib/roomStore");
 
 const app = express();
 app.use(cors());
@@ -45,9 +50,10 @@ Produce a JSON object with exactly this shape:
   "puzzles": [
     {
       "id": string,
-      "type": "cipher" | "riddle" | "pattern" | "logic",
+      "type": "cipher" | "riddle" | "pattern" | "logic" | "observation" | "arrangement",
       "prompt": string,
       "plaintext": string,
+      "items": [string],
       "answer": string,
       "hints": [string, string, string],
       "requires": [string]
@@ -63,6 +69,8 @@ Rules:
 - Vary puzzle "type" across the set.
 - Cipher puzzles: set "plaintext" to a 3-5 word in-world phrase; set "answer" to that same phrase. "prompt" is flavor/context only — no cipher text, no plaintext — the server appends the real encoded text. Non-cipher puzzles: omit "plaintext".
 - Pattern puzzles: "prompt" is flavor/context only — describe the in-world device or display that shows a numeric sequence, but include NO numbers and NO sequence; the server appends the real one. Omit "answer" and "hints" for pattern puzzles — the server generates both.
+- Observation puzzles: "prompt" is flavor/context only — describe a lock or mechanism that has been keeping count of what fills this room; include NO numbers and do NOT name specific objects to count — the server appends the real counting question built from the room's actual furnishings. Omit "answer", "hints", and "plaintext".
+- Arrangement puzzles: set "items" to 4-5 DISTINCT short (1-4 word) in-world object names that could stand in a row (relics, keys, portraits, vials...). "prompt" is flavor/context only — describe the row, rack, or pedestals awaiting a correct order, but include NO ordering clues and NO positions; the server generates the secret order, the clues, and the answer format. Omit "answer" and "hints". Non-arrangement puzzles: omit "items".
 - Hints: exactly 3 per puzzle (except pattern — see above), in-world text only, ordered subtle to explicit. Never show your own reasoning ("let me", "wait,", "actually,", "hmm", "try again", etc.) — if a puzzle doesn't work while drafting, silently discard it and write a different one.
 - Logic puzzles: answer must be numeric/computable, derived from math or counting clues — never an open "who's assigned to which station" grid-deduction puzzle. Never state the answer directly in "prompt". The final hint's number must match "answer".
 - Riddle puzzles: original, written for this theme — never a reused classic (e.g. "cities but no houses"). The full riddle verse must appear in "prompt" itself.
@@ -78,30 +86,42 @@ const DIFFICULTY_CONFIG = {
   easy: {
     cipher: { mechanics: ["caesar", "reverse"], caesarShiftRange: [1, 3] },
     patternRules: ["arithmetic"],
+    observation: { terms: 1 },
+    arrangement: { size: 4 },
+    metaLock: false,
     maxTokens: 2000,
     maxAttempts: 3,
     promptBlock: `This room is EASY difficulty:
 - 3 puzzles total.
+- Include exactly one "observation" puzzle (a gentle push to look around the room).
 - Logic: single-step arithmetic only.
 - First hint should be direct and revealing.`,
   },
   medium: {
     cipher: { mechanics: ["caesar", "atbash"], caesarShiftRange: [2, 8] },
     patternRules: ["arithmetic", "geometric", "quadratic"],
-    maxTokens: 2200,
+    observation: { terms: 2 },
+    arrangement: { size: 4 },
+    metaLock: false,
+    maxTokens: 2500,
     maxAttempts: 3,
     promptBlock: `This room is MEDIUM difficulty:
 - 4-5 puzzles total.
+- Include at least one "observation" or "arrangement" puzzle.
 - Logic: multi-step arithmetic word problems are fine.
 - First hint should be a gentle nudge, not a direct answer.`,
   },
   hard: {
-    cipher: { mechanics: ["caesar", "atbash", "a1z26"], caesarShiftRange: [5, 15] },
+    cipher: { mechanics: ["caesar", "atbash", "a1z26", "vigenere"], caesarShiftRange: [5, 15] },
     patternRules: ["geometric", "quadratic", "alternating", "fibonacci", "affine"],
-    maxTokens: 4000,
+    observation: { terms: 3 },
+    arrangement: { size: 5 },
+    metaLock: true,
+    maxTokens: 4500,
     maxAttempts: 5,
     promptBlock: `This room is HARD difficulty:
 - 6-7 puzzles total.
+- Include at least one "arrangement" puzzle AND at least one "observation" puzzle.
 - Logic: at least 2 chained calculation steps.
 - First hint should be vaguer/more abstract than medium. Keep every hint to 1-2 sentences — state the approach or result only, never intermediate arithmetic or out-loud thinking.`,
   },
@@ -119,13 +139,15 @@ function buildSystemPrompt(difficulty) {
 const PUZZLE_BUILDERS = {
   cipher: (puzzle, config) => applyCipher(puzzle, config.cipher),
   pattern: (puzzle, config) => applyPattern(puzzle, config.patternRules),
+  observation: (puzzle, config, room) => applyObservation(puzzle, config.observation, room),
+  arrangement: (puzzle, config) => applyArrangement(puzzle, config.arrangement),
 };
 
 function buildPuzzles(room, config) {
   const puzzles = Array.isArray(room.puzzles) ? room.puzzles : [];
   for (const puzzle of puzzles) {
     const builder = PUZZLE_BUILDERS[puzzle.type];
-    if (builder) builder(puzzle, config);
+    if (builder) builder(puzzle, config, room);
   }
 }
 
@@ -140,7 +162,8 @@ function buildPuzzles(room, config) {
      { type: "stage", stage: "check" }    consistency checks running
      { type: "retry", attempt, max, category, reason }
                                           a draft failed checks; regenerating
-     { type: "stage", stage: "build" }    cipher/pattern building + family assignment
+     { type: "stage", stage: "build" }    family assignment, decor manifest,
+                                          server puzzle building, meta lock
 
    The story/scene/puzzles stages come from watching the token stream for the
    top-level keys in schema order — real progress, not a timer. */
@@ -240,8 +263,14 @@ async function runGenerationPipeline({ theme, difficulty, onEvent, signal }) {
     }
 
     onEvent({ type: "stage", stage: "build" });
-    buildPuzzles(room, config);
+    // Order matters: family must be normalized before the decor manifest is
+    // built (it is family-keyed), and the manifest must exist before the
+    // observation builder computes answers from it. The meta lock runs last —
+    // it stamps digits onto already-built puzzles.
     normalizeVisualFamily(room);
+    buildDecor(room);
+    buildPuzzles(room, config);
+    applyMetaLock(room, config);
     return room;
   }
 
@@ -270,12 +299,24 @@ app.post("/generate-room", generateRoomLimiter, async (req, res) => {
 
   try {
     const room = await runGenerationPipeline({ ...params, onEvent: () => {} });
+    await persistRoom(room, params);
     return res.status(200).json(room);
   } catch (err) {
     if (err instanceof PipelineError) return res.status(err.status).json({ error: err.message });
     return handleAnthropicError(err, res);
   }
 });
+
+/** Saves a generated room and stamps its share code onto the payload.
+    Persistence failure must never cost the player their room — log and
+    serve it codeless instead. */
+async function persistRoom(room, params) {
+  try {
+    room.shareCode = await saveRoom(room, params);
+  } catch (err) {
+    console.error("[room-store] failed to persist room:", err.message);
+  }
+}
 
 /**
  * Streaming variant: NDJSON progress events (one JSON object per line)
@@ -312,6 +353,7 @@ app.post("/generate-room/stream", generateRoomLimiter, async (req, res) => {
       onEvent: send,
       signal: aborter.signal,
     });
+    await persistRoom(room, params);
     send({ type: "room", room });
   } catch (err) {
     if (aborter.signal.aborted) {
@@ -325,6 +367,30 @@ app.post("/generate-room/stream", generateRoomLimiter, async (req, res) => {
     clearInterval(heartbeat);
     res.end();
   }
+});
+
+/* ---- Room retrieval by share code ---------------------------------------- */
+
+const roomLookupLimiter = rateLimit({
+  windowMs: 10 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many lookups — slow down" },
+});
+
+app.get("/rooms/:code", roomLookupLimiter, async (req, res) => {
+  const record = await loadRoom(req.params.code);
+  if (!record) {
+    return res.status(404).json({ error: "No room with that code" });
+  }
+  return res.status(200).json({
+    code: record.code,
+    createdAt: record.createdAt,
+    theme: record.theme,
+    difficulty: record.difficulty,
+    room: record.room,
+  });
 });
 
 const VALID_VISUAL_FAMILIES = [

@@ -2,11 +2,13 @@ const { test } = require("node:test");
 const assert = require("node:assert/strict");
 const {
   MECHANICS,
+  VIGENERE_KEYS,
   applyCipher,
   caesarEncode,
   atbashEncode,
   a1z26Encode,
   reverseEncode,
+  vigenereEncode,
 } = require("../lib/ciphers");
 
 /* ---- Encoders are correct and decodable ---------------------------------- */
@@ -38,6 +40,40 @@ test("a1z26 maps letters to alphabet positions", () => {
 
 test("reverse flips each word, keeps order", () => {
   assert.equal(reverseEncode("core shield"), "EROC DLEIHS");
+});
+
+test("vigenere encodes with a repeating key and round-trips", () => {
+  assert.equal(vigenereEncode("aaa", "BCD"), "BCD"); // shift by 1, 2, 3
+  assert.equal(vigenereEncode("ab cd", "B"), "BC DE"); // spaces don't consume key
+  // decode = encode with the inverse key (26 - shift per letter)
+  const key = "EMBER";
+  const inverse = key
+    .split("")
+    .map((ch) => String.fromCharCode(((26 - (ch.charCodeAt(0) - 65)) % 26) + 65))
+    .join("");
+  const ct = vigenereEncode("the vault remembers everything", key);
+  assert.equal(vigenereEncode(ct.toLowerCase(), inverse), "THE VAULT REMEMBERS EVERYTHING");
+});
+
+test("applyCipher: vigenere prints its key in the prompt (the puzzle is self-contained)", () => {
+  for (let i = 0; i < 40; i++) {
+    const p = draftCipher();
+    applyCipher(p, { mechanics: ["vigenere"], caesarShiftRange: [1, 3] });
+    assert.ok(VIGENERE_KEYS.includes(p.cipherKey), `unknown key ${p.cipherKey}`);
+    assert.ok(
+      p.prompt.includes(`A single word is scratched beneath it: "${p.cipherKey}"`),
+      "key missing from prompt"
+    );
+    assert.equal(p.answer, "the reactor never sleeps");
+    assert.ok(p.hints[2].includes("THE REACTOR NEVER SLEEPS"));
+    // the ciphertext decodes back to the plaintext under the printed key
+    const ct = p.prompt.match(/The coded text reads: "([^"]+)"/)[1];
+    const inverse = p.cipherKey
+      .split("")
+      .map((ch) => String.fromCharCode(((26 - (ch.charCodeAt(0) - 65)) % 26) + 65))
+      .join("");
+    assert.equal(vigenereEncode(ct.toLowerCase(), inverse), "THE REACTOR NEVER SLEEPS");
+  }
 });
 
 /* ---- applyCipher builds a solvable puzzle --------------------------------- */

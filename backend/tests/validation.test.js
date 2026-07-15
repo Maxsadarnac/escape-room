@@ -89,3 +89,53 @@ test("declared answer in a riddle prompt is rejected", () => {
   riddle.prompt = `A note says: the answer is ${riddle.answer}. Enter it.`;
   assert.match(getValidationFailureReason(room), /answer leaked/);
 });
+
+/* ---- Observation drafts ----------------------------------------------------- */
+
+test("observation puzzles may omit answer and hints (server-authored)", () => {
+  const room = goodRoom();
+  const observation = room.puzzles.find((p) => p.type === "observation");
+  assert.equal(observation.answer, undefined);
+  assert.equal(observation.hints, undefined);
+  assert.equal(getValidationFailureReason(room), null);
+});
+
+test("observation prompt containing any digit is rejected", () => {
+  const room = goodRoom();
+  const observation = room.puzzles.find((p) => p.type === "observation");
+  observation.prompt = "The counter wheel shows 3 notches already turned.";
+  assert.match(getValidationFailureReason(room), /observation puzzle prompt contains numbers/);
+});
+
+/* ---- Arrangement drafts ------------------------------------------------------ */
+
+test("arrangement puzzles may omit answer and hints but need 4-5 items", () => {
+  const room = goodRoom();
+  const arrangement = room.puzzles.find((p) => p.type === "arrangement");
+  assert.equal(arrangement.answer, undefined);
+  assert.equal(getValidationFailureReason(room), null);
+
+  arrangement.items = arrangement.items.slice(0, 3);
+  assert.match(getValidationFailureReason(room), /^SCHEMA: .*items.*4-5/);
+});
+
+test("arrangement with missing items array is a schema failure", () => {
+  const room = goodRoom();
+  const arrangement = room.puzzles.find((p) => p.type === "arrangement");
+  delete arrangement.items;
+  assert.match(getValidationFailureReason(room), /^SCHEMA: missing or invalid required field: items/);
+});
+
+test("arrangement with duplicate item names is rejected", () => {
+  const room = goodRoom();
+  const arrangement = room.puzzles.find((p) => p.type === "arrangement");
+  arrangement.items = ["brass key", "iron key", "Brass Key", "bone key"];
+  assert.match(getValidationFailureReason(room), /^SCHEMA: .*duplicate names/);
+});
+
+test("arrangement item names longer than 4 words are rejected", () => {
+  const room = goodRoom();
+  const arrangement = room.puzzles.find((p) => p.type === "arrangement");
+  arrangement.items = ["brass key", "iron key", "silver key", "the very long ornate ceremonial key"];
+  assert.match(getValidationFailureReason(room), /^SCHEMA: .*at most 4 words/);
+});
