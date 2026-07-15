@@ -6,6 +6,7 @@ const {
   buildCluePool,
   countSolutions,
   allPermutations,
+  specToTest,
 } = require("../lib/arrangement");
 
 const NAMES_4 = ["brass key", "iron key", "silver key", "bone key"];
@@ -116,4 +117,20 @@ test("allPermutations: correct counts and all distinct", () => {
   const perms = allPermutations(5);
   assert.equal(perms.length, 120);
   assert.equal(new Set(perms.map((p) => p.join(""))).size, 120);
+});
+
+/* ---- The shipped specs re-prove uniqueness from the puzzle JSON alone ------ */
+
+test("puzzle.arrangementClues alone pin the answer as the unique solution", () => {
+  for (const [names, size] of [[NAMES_4, 4], [NAMES_5, 5]]) {
+    for (let i = 0; i < 80; i++) {
+      const p = { id: "p1", type: "arrangement", prompt: "x", items: names, requires: [] };
+      applyArrangement(p, { size });
+      const tests = p.arrangementClues.map(specToTest);
+      const solutions = allPermutations(size).filter((perm) => tests.every((t) => t(perm)));
+      assert.equal(solutions.length, 1, "specs do not pin a unique solution");
+      const answerFromSpecs = solutions[0].map((itemIdx) => itemIdx + 1).join("");
+      assert.equal(answerFromSpecs, p.answer, "specs' solution differs from stored answer");
+    }
+  }
 });
