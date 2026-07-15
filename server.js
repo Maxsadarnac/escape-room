@@ -104,7 +104,11 @@ const DIFFICULTY_CONFIG = {
     arrangement: { size: 4 },
     metaLock: false,
     maxTokens: 2500,
-    maxAttempts: 3,
+    // 4 (was 3): medium rooms carry 4-5 puzzles, so a draft has more
+    // chances to trip the model-authored logic checks than easy's 3 — the
+    // same reasoning that gives hard 5 attempts. E2E (2026-07) saw a medium
+    // run exhaust 3 attempts on logic-quality discards alone.
+    maxAttempts: 4,
     promptBlock: `This room is MEDIUM difficulty:
 - 4-5 puzzles total.
 - Include at least one "observation" or "arrangement" puzzle.
